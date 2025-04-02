@@ -1,0 +1,192 @@
+# Load required packages
+if (!require("shiny")) install.packages("shiny", repos = "https://cran.rstudio.com/")
+if (!require("DT")) install.packages("DT", repos = "https://cran.rstudio.com/")
+if (!require("ggplot2")) install.packages("ggplot2", repos = "https://cran.rstudio.com/")
+if (!require("plotly")) install.packages("plotly", repos = "https://cran.rstudio.com/")
+if (!require("dplyr")) install.packages("dplyr", repos = "https://cran.rstudio.com/")
+if (!require("reshape2")) install.packages("reshape2", repos = "https://cran.rstudio.com/")
+if (!require("factoextra")) install.packages("factoextra", repos = "https://cran.rstudio.com/")
+if (!require("viridis")) install.packages("viridis", repos = "https://cran.rstudio.com/")
+
+library(shiny)
+library(DT)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(reshape2)
+library(factoextra)
+library(viridis)
+
+# Read the dataset, or use a dummy dataset if file is not found
+  data <- read.csv("sc.dataset_added-column.csv")
+
+
+# Define UI using a tabset layout
+ui <- fluidPage(
+  titlePanel(div(h3('L-SCIE Database Visualization', style = 'margin: 0;'),
+                 h4('Maintained by Fanny Coutelot', style = 'margin: 0;'))),
+  tabsetPanel(
+    tabPanel("Dataset Overview",
+             h4('Overview'),
+             verbatimTextOutput('data_overview')
+    ),
+    tabPanel("View Data",
+             h4('Data Table'),
+             DTOutput('data_table')
+    ),
+    tabPanel("Boxplot & Heatmap",
+             h4('Boxplot & Heatmap'),
+             plotOutput('boxplot'),
+             plotOutput('heatmap')
+    ),
+    tabPanel("Kd Distribution",
+             h4('Kd Distribution'),
+             plotlyOutput('kd_distribution')
+    ),
+    tabPanel("Kd Value Explorer",
+             h4('Kd Explorer'),
+             sidebarLayout(
+               sidebarPanel(
+                 sliderInput('kd_range', 'Kd Range', 
+                             min = min(data$Kd, na.rm = TRUE), 
+                             max = max(data$Kd, na.rm = TRUE), 
+                             value = c(min(data$Kd, na.rm = TRUE), max(data$Kd, na.rm = TRUE)))
+               ),
+               mainPanel(
+                 DTOutput('kd_table')
+               )
+             )
+    ),
+    tabPanel("PCA Analysis",
+             h4('PCA Analysis'),
+             sidebarLayout(
+               sidebarPanel(
+                 checkboxInput('scale_data', 'Scale Data', value = TRUE),
+                 selectInput('sorbate_select', 'Select Sorbate', choices = unique(data$Sorbate))
+               ),
+               mainPanel(
+                 plotOutput('pca_plot'),
+                 plotOutput('scree_plot'),
+                 plotOutput('var_contrib_plot'),
+                 verbatimTextOutput('pca_summary'),
+                 downloadButton('download_plot', 'Download PCA Plot')
+               )
+             )
+    )
+  )
+)
+
+# Define server logic
+server <- function(input, output, session) {
+  
+  # Dataset overview
+  output$data_overview <- renderPrint({
+    summary(data)
+  })
+  
+  # Data table
+  output$data_table <- renderDT({
+    datatable(data)
+  })
+  
+  # Boxplot of Kd
+  output$boxplot <- renderPlot({
+    boxplot(data$Kd, main = 'Boxplot of Kd', ylab = 'Kd')
+  })
+  
+  # Heatmap (using only numeric columns)
+  output$heatmap <- renderPlot({
+    num_cols <- sapply(data, is.numeric)
+    if (sum(num_cols) > 1) {
+      heatmap(as.matrix(data[, num_cols]), main = 'Heatmap')
+    }
+  })
+  
+  # Kd Distribution using plotly for interactivity
+  output$kd_distribution <- renderPlotly({
+    req(data$Kd)
+    p <- ggplot(data, aes(x = Kd)) +
+      geom_histogram(fill = 'steelblue', color = 'white', bins = 30) +
+      theme_minimal()
+    ggplotly(p)
+  })
+  
+  # Kd Value Explorer
+  output$kd_table <- renderDT({
+    req(input$kd_range)
+    subset_data <- subset(data, Kd >= input$kd_range[1] & Kd <= input$kd_range[2])
+    datatable(subset_data)
+  })
+  
+  # PCA Analysis
+  data_clean_pca <- reactive({
+    # Using only numeric columns and complete cases for PCA
+    num_cols <- sapply(data, is.numeric)
+    cleaned <- data[, num_cols, drop = FALSE]
+    cleaned <- na.omit(cleaned)
+    cleaned
+  })
+  
+  pca_results <- reactive({
+    req(data_clean_pca())
+    pca_data <- data_clean_pca()
+    prcomp(pca_data, scale. = input$scale_data)
+  })
+  
+  # PCA plot
+  output$pca_plot <- renderPlot({
+    req(pca_results())
+    # If Mineral exists, use it for coloring if possible
+    if("Mineral" %in% colnames(data)){
+      # Match the rows from cleaned data back to original data indices if needed
+      valid_idx <- as.numeric(rownames(data_clean_pca()))
+      group <- data$Mineral[valid_idx]
+      fviz_pca_ind(pca_results(),
+                   geom.ind = "point",
+                   col.ind = group,
+                   palette = "viridis",
+                   addEllipses = TRUE,
+                   ellipse.type = "confidence",
+                   legend.title = "Mineral",
+                   pointsize = 3) +
+        theme_minimal()
+    } else {
+      plot(pca_results(), main = 'PCA Plot')
+    }
+  })
+  
+  # Scree plot
+  output$scree_plot <- renderPlot({
+    req(pca_results())
+    fviz_eig(pca_results(), addlabels = TRUE, ylim = c(0, 100)) +
+      theme_minimal()
+  })
+  
+  # Variable contributions plot for PCA
+  output$var_contrib_plot <- renderPlot({
+    req(pca_results())
+    fviz_pca_var(pca_results(), col.var = "contrib",
+                 gradient.cols = viridis(256),
+                 repel = TRUE) +
+      theme_minimal()
+  })
+  
+  # PCA summary
+  output$pca_summary <- renderPrint({
+    req(pca_results())
+    summary(pca_results())
+  })
+  
+  # Download PCA plot handler
+  output$download_plot <- downloadHandler(
+    filename = function() {
+      "pca_analysis.png"
+    },
+    content = function(file) {
+      ggsave(file, plot = last_plot(), width = 12, height = 8)
+    }
+  )
+}
+
+# Run the app
+shinyApp(ui = ui, server = server)

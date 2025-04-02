@@ -1,0 +1,1418 @@
+
+#####################################################################################################################################################
+#PCA TEST ###########################################################################################################################################
+
+library("FactoMineR")
+# install.packages("PerformanceAnalytics")
+library("PerformanceAnalytics")
+library("factoextra")
+library(ggplot2)
+library("fuzzyjoin")
+library(plyr)
+library(dplyr)
+library(tidyverse)
+library(tidypaleo)
+library(gridExtra)
+library(grid)
+library(ggplot2)
+library(lattice)
+theme_set(theme_bw(8))
+
+
+
+### Use individual endpoint folders within 2010_2017 master files merged
+
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(stringr)
+library(missMDA)
+
+rm(list=ls())
+
+
+summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
+                      conf.interval=.95, .drop=TRUE) {
+  library(plyr)
+  
+  # New version of length which can handle NA's: if na.rm==T, don't count them
+  length2 <- function (x, na.rm=FALSE) {
+    if (na.rm) sum(!is.na(x))
+    else       length(x)
+  }
+  
+  # This does the summary. For each group's data frame, return a vector with
+  # N, mean, and sd
+  datac <- ddply(data, groupvars, .drop=.drop,
+                 .fun = function(xx, col) {
+                   c(N    = length2(xx[[col]], na.rm=na.rm),
+                     mean = mean   (xx[[col]], na.rm=na.rm),
+                     sd   = sd     (xx[[col]], na.rm=na.rm)
+                   )
+                 },
+                 measurevar
+  )
+  
+  # Rename the "mean" column    
+  datac <- rename(datac, c("mean" = measurevar))
+  
+  datac$se <- datac$sd / sqrt(datac$N)  # Calculate standard error of the mean
+  
+  # Confidence interval multiplier for standard error
+  # Calculate t-statistic for confidence interval: 
+  # e.g., if conf.interval is .95, use .975 (above/below), and use df=N-1
+  ciMult <- qt(conf.interval/2 + .5, datac$N-1)
+  datac$ci <- datac$se * ciMult
+  
+  return(datac)
+}
+
+
+##### read in 'final' data tab from PCB master file #######
+
+## set working director to folder containing data file
+setwd("C:/Users/fanny/OneDrive - Clemson University/POND_B/PondB-database")
+
+
+
+#________________________________________________________________________________________________________________________________
+
+# Read in .csv file containing all chemistry data associated with CTD data
+water.chem <- read.csv('water-chem-sum.csv',sep="\t")
+water.chem$date<- as.Date(water.chem$date)
+water.chem$Average <- as.numeric(water.chem$Average )
+water.chem.loc3<- subset(water.chem, Location=="Loc3"&param=="Temp")
+
+
+# rename column
+water.chem.loc3 <- water.chem.loc3 %>%  rename( "temp" = "Average", "Depth" = "Depth_bin2", "Date"="date")
+#keep only date, temp and depth column
+current <- water.chem.loc3[ , c("Date","temp","Depth")]
+
+#extract a specific year
+current_2021<- current %>%
+  filter(Date >= as.Date('2020-01-01') & Date <= as.Date('2021-12-31'))
+
+# keep only the depth of 0.5, 6 and 9
+#current.reduced<- subset(current, Depth==0.5&Depth==6.0&Depth==9.0)
+current.reduced.0.5m<- subset(current_2021, Depth==0.5)
+current.reduced.6m<- subset(current_2021, Depth==6)
+current.reduced.9m<- subset(current_2021, Depth==9)
+
+#Dickey-Fuller test
+library(tseries)
+adf.test(current.reduced.0.5m[,"temp"],  alternative = "stationary")
+#water.temp.6m<- subset(water.chem, Location=="Loc3"&param=="Temp"&Depth_bin2==6)
+#water.temp.9m<- subset(water.chem, Location=="Loc3"&param=="Temp"&Depth_bin2==9)
+
+# pinder data treatment
+pinder92 <- read.csv('C:/Users/fanny/OneDrive/Bureau/POND_B/PondB-database/litterture data/pinder-water-data.csv',sep=",")
+pinder92$Date <- as.Date(pinder92$Date, origin = "1983-01-31")
+pinder92.reduced <- pinder92[ , c("Date","temp","Depth")]
+#extract a specific year
+pinder92_1983<- pinder92.reduced %>%
+  filter(Date >= as.Date('1983-01-01') & Date <= as.Date('1984-12-31'))
+# subset by depth of 0.5, 6 and 9
+pinder92.temp.0.5m<- subset(pinder92_1983, Depth==0.5)
+pinder92.temp.6m<- subset(pinder92_1983, Depth==6)
+pinder92.temp.9m<- subset(pinder92_1983, Depth==9)
+
+combineddata<-rbind(current.reduced.0.5m, current.reduced.6m, current.reduced.9m, pinder92.temp.0.5m, pinder92.temp.6m, pinder92.temp.9m)
+write.csv(combineddata, "combineddata_temperature-past-present.csv", row.names=FALSE)
+#########################################################################################################################################
+#stat analysis between years
+#compiling surface temperature
+
+library(haven)
+library(tidyverse)
+library(dplyr)
+
+current_2021<- current %>%
+  filter(Date >= as.Date('2019-01-01') & Date <= as.Date('2022-12-31'))
+
+# keep only the depth of 0.5, 6 and 9
+#current.reduced<- subset(current, Depth==0.5&Depth==6.0&Depth==9.0)
+current.reduced.0.5m<- subset(current_2021, Depth==0.5)
+current.reduced.6m<- subset(current_2021, Depth==6)
+current.reduced.9m<- subset(current_2021, Depth==9)
+
+Surface<-rbind(pinder92.temp.0.5m,current.reduced.0.5m)
+Surface_summary <- Surface %>%
+  group_by(factor(year(Date)))%>%
+  summarise(means=mean(temp, na.rm=T), sds=sd(temp, na.rm=T), n=n())
+
+Surface <- rbind(pinder92.temp.0.5m, current.reduced.0.5m)
+Surface <- Surface %>%
+  mutate(year = factor(year(Date)))
+# Convert the 'year' column to a numeric format
+Surface$year <- as.numeric(as.character(Surface$year))
+
+# Check for missing values in 'temp' and 'year' columns
+sum(is.na(Surface$temp))  # Check for missing values in 'temp'
+sum(is.na(Surface$year))  # Check for missing values in 'year'
+
+# Fit the 3rd polynomial regression model
+# Group by year and fit separate polynomial regression models
+Surface <- Surface %>%
+  mutate(year_numeric = as.numeric(format(Date, "%Y")))
+
+
+model_surface <- lm(temp ~ poly(date, 3), data = Surface)
+# Print the summary of the regression model
+summary(model_surface)
+
+
+# Get the predicted temperature values for each year from the model
+predicted_values <- predict(model_surface, newdata = data.frame(year = unique(Surface$year)))
+
+# Create a new dataframe to store the predicted yearly temperature means
+yearly_temperature_means <- data.frame(year = unique(Surface$year), predicted_mean = predicted_values)
+
+# Print the yearly temperature means
+print(yearly_temperature_means)
+
+
+# Load the necessary library for ANOVA
+library(stats)
+
+# Perform one-way ANOVA to compare yearly temperature means
+anova_result <- aov(predicted_mean ~ year, data = yearly_temperature_means)
+
+# Print the ANOVA table
+print(summary(anova_result))
+
+########################################### Test of linear regression to estimate the yearly temperature change
+
+#### SURFACE #####
+Linear_model_surface <- lm(temp ~ year_numeric, data = Surface)
+# Print the summary of the regression model
+summary(Linear_model_surface)
+
+slope_surface <- coef(Linear_model_surface)["year_numeric"]
+summary(Linear_model_surface) # Print the summary of the linear model for additional information
+
+# Print the slope (warming trend)
+warming_per_decade_surface <- slope_surface * 10
+cat("Warming trend per decade:", warming_per_decade_surface, "degrees per decade\n")
+
+#### 6m thermoclne #####
+thermocline <- rbind(pinder92.temp.6m, current.reduced.6m)
+thermocline <- thermocline %>%
+  mutate(year = factor(year(Date)))
+# Convert the 'year' column to a numeric format
+thermocline$year <- as.numeric(as.character(thermocline$year))
+
+# Check for missing values in 'temp' and 'year' columns
+sum(is.na(thermocline$temp))  # Check for missing values in 'temp'
+sum(is.na(thermocline$year))  # Check for missing values in 'year'
+
+# Fit the 3rd polynomial regression model
+# Group by year and fit separate polynomial regression models
+thermocline <- thermocline %>%
+  mutate(year_numeric = as.numeric(format(Date, "%Y")))
+Linear_model_6m <- lm(temp ~ year_numeric, data = thermocline)
+# Print the summary of the regression model
+summary(Linear_model_6m)
+
+slope_6m <- coef(Linear_model_6m)["year_numeric"]
+summary(Linear_model_6m) # Print the summary of the linear model for additional information
+
+# Print the slope (warming trend)
+warming_per_decade_6m <- slope_6m * 10
+cat("Warming trend per decade:", warming_per_decade_6m, "degrees per decade\n")
+
+
+#### 9m bottom #####
+bottom <- rbind(pinder92.temp.9m, current.reduced.9m)
+bottom <- bottom %>%
+  mutate(year = factor(year(Date)))
+# Convert the 'year' column to a numeric format
+bottom$year <- as.numeric(as.character(bottom$year))
+
+# Check for missing values in 'temp' and 'year' columns
+sum(is.na(bottom$temp))  # Check for missing values in 'temp'
+sum(is.na(bottom$year))  # Check for missing values in 'year'
+
+# Fit the 3rd polynomial regression model
+# Group by year and fit separate polynomial regression models
+bottom <- bottom %>%
+  mutate(year_numeric = as.numeric(format(Date, "%Y")))
+Linear_model_9m <- lm(temp ~ year_numeric, data = bottom)
+# Print the summary of the regression model
+summary(Linear_model_9m)
+
+slope_9m <- coef(Linear_model_9m)["year_numeric"]
+summary(Linear_model_9m) # Print the summary of the linear model for additional information
+
+# Print the slope (warming trend)
+warming_per_decade_9m <- slope_9m * 10
+cat("Warming trend per decade:", warming_per_decade_6m, "degrees per decade\n")
+
+
+##########################################################################################################################################
+#plots of the water temperature
+#png("water-historical temperature0.5.png", width=10, height=2, units='in', res=200)
+
+#viridis is a color package for color blind
+library(viridis)
+
+test_plot0.5m<- ggplot(rbind(current.reduced.0.5m, pinder92.temp.0.5m), aes(month(Date, label=TRUE, abbr=TRUE), 
+                                                                        temp, group=factor(year(Date)), colour=factor(year(Date)))) +
+  geom_line(linewidth=1, alpha = 1,  linetype="dashed") +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
+ # geom_line(data=rbind(current.reduced.6m, pinder92.temp.6m),linewidth=1, alpha = 1,  linetype="dotted") +
+#  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE) +
+#  geom_line(data=rbind(current.reduced.9m, pinder92.temp.9m),linewidth=1, alpha = 1,  linetype="solid") +
+ # geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE) +
+  geom_point(size=2) +
+  labs(x="Month", y="Water Temperature (?C)", colour="Year") +
+  ggtitle("0.5m depth") +
+  theme_classic()+
+  theme(legend.position = 'bottom', legend.direction = "horizontal")+
+  scale_fill_viridis(option="magma")
+test_plot0.5m
+#dev.off()
+
+
+
+test_plot6m<- ggplot(rbind(current.reduced.6m, pinder92.temp.6m), aes(month(Date, label=TRUE, abbr=TRUE), 
+                                                                            temp, group=factor(year(Date)), colour=factor(year(Date)))) +
+  geom_line(linewidth=1, alpha = 1,  linetype="dashed") +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 3), se = FALSE) +
+  # geom_line(data=rbind(current.reduced.6m, pinder92.temp.6m),linewidth=1, alpha = 1,  linetype="dotted") +
+  #  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE) +
+  #  geom_line(data=rbind(current.reduced.9m, pinder92.temp.9m),linewidth=1, alpha = 1,  linetype="solid") +
+  # geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE) +
+  geom_point(size=2) +
+  labs(x="Month", y="Water Temperature (?C) ", colour="Year") +
+  ggtitle("6m depth") +
+#  theme(legend.text = element_text(size=0.5),
+#        scale_linetype_manual(values=c("dashed", "dotted", "solid")),
+#        labels = c("0.5 m", "6 m","9 m"),
+#        theme(legend.position="top"))+
+  theme_classic()+
+  theme(legend.position = 'bottom', legend.direction = "horizontal")
+
+test_plot6m
+
+
+
+test_plot9m<- ggplot(rbind(current.reduced.9m, pinder92.temp.9m), aes(month(Date, label=TRUE, abbr=TRUE), 
+                                                                      temp, group=factor(year(Date)), colour=factor(year(Date)))) +
+  geom_line(linewidth=1, alpha = 1,  linetype="dashed") +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE) +
+  # geom_line(data=rbind(current.reduced.6m, pinder92.temp.6m),linewidth=1, alpha = 1,  linetype="dotted") +
+  #  geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE) +
+  #  geom_line(data=rbind(current.reduced.9m, pinder92.temp.9m),linewidth=1, alpha = 1,  linetype="solid") +
+  # geom_smooth(method = "lm", formula = y ~ poly(x, 2), se = FALSE) +
+  geom_point(size=2) +
+  labs(x="Month", y="Water Temperature (?C)", colour="Year") +
+  ggtitle("9m depth") +
+  theme_classic()+
+  theme(legend.position = 'bottom', legend.direction = "horizontal")
+
+test_plot9m
+
+
+
+
+
+library(cowplot)
+
+png("Historical-water-temp-stat.png", width=10, height=3, units='in', res=800)
+
+plot_grid(test_plot0.5m, test_plot6m,  test_plot9m, 
+          align = 'h',
+          ncol=3,
+          #labels = c("Dim.1","Dim.2","Dim.3"), label_size = 14, label_x = .5, label_y = .975,
+          rel_widths = c(1.02,1.02, 1.02))
+dev.off()
+######################################################################################################
+######## profile of thermocline for july and february compared to historical data from albert and bowling
+
+historical_temp2<-read.csv('historical_temp2.csv')
+
+historical_temp2$Date <- as.Date(historical_temp2$Date, origin = "1983-01-31")
+
+png("Epilion-depth-historical.png", width=15, height=10, units='in', res=200)
+
+Temp_study_loc3_plot <- ggplot(historical_temp2, aes(month(Date, label=TRUE, abbr=TRUE), 
+                                                                                   temp, group=factor(year(Date)), colour=factor(year(Date)))) +
+  # scale_x_date(date_labels = "%b/%d")+
+  #scale_color_manual(values=c("pink", "purple","blue")) +
+  geom_point( size = 2) +
+  geom_line(historical_temp2, aes(x = Depth *100, y = temp), size = 1)+
+  scale_x_continuous(sec.axis = sec_axis(~./100, name = 'Dissolved Oxygen (%)')) +
+  #facet_wrap(vars(Month)) + 
+  scale_y_reverse() + # scale_x_continuous(position = 'top')+
+  geom_hline(yintercept = c(2.75, 6.75), col = "red", lty = 2, size=1.5, alpha = 0.7)+ 
+  labs(y = "Depth (m)", x = "Water Temperature (C)") +
+  
+  # geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 18, face = "bold"),
+         axis.text.x = element_text( size = 18,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 18, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size = 18, face = "bold")) +
+  #scale_shape_manual(name = "year", values = c('2021'=0,'1987'=1, '1983'=2))
+
+Temp_study_loc3_plot
+dev.off()
+
+
+######################################################################################################
+######## Major elements data comparison with alberts 1988
+#########################################################################################################
+
+Historical_majors<-read.csv('C:/Users/fanny/OneDrive/Bureau/POND_B/PondB-database/litterture data/Historical-geochem.csv')
+
+png("Historical_majors.png", width=10, height=3, units='in', res=200)
+
+Historical_majors_plot <- ggplot(data=Historical_majors, aes(x = Value, y = depth, color=factor(Date), shape = factor(Date))) +
+  # scale_x_date(date_labels = "%b/%d")+
+  
+  geom_point() +
+  #geom_smooth(orientation = "y")+
+  #geom_smooth(aes(group = Average), method = "lm", se = FALSE)+
+  #geom_path() +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_wrap(vars(param), ncol = 4,scales="free_x" ) + 
+  scale_y_reverse() + # scale_x_continuous(position = 'top')+
+  geom_hline(yintercept = c(5, 7.75), col = "red", lty = 2, size=1, alpha = 0.5)+ 
+  labs(y = "Depth (m)", x = "Water concentration (mg/L)") +
+  #geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 12, face = "bold"),
+         axis.text.x = element_text( size = 12,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 12, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size = 12, face = "bold"))+
+#  scale_shape_manual(values = c(21:24))+
+scale_shape_manual(
+  name = "Dates",
+  breaks = c('2020-10-15', '2021-02-15', '1983-10-02', '1984-02-11'),
+  values = c('2020-10-15' = 15, '2021-02-15' = 16, '1983-10-02' = 0, '1984-02-11' = 2))+
+
+  scale_color_manual(name='Dates',
+                     breaks=c('2020-10-15', '2021-02-15', '1983-10-02',"1984-02-11" ),
+                     values=c('2020-10-15'='blue3', '2021-02-15'='green4', '1983-10-02'='blue3' , '1984-02-11'='green4'))
+#scale_shape_manual(name = "Date", values = c('2020-10-15'=0, '2021-02-15'=2, "1983-10-02 "=15, "1984-02-11"=17))
+
+Historical_majors_plot
+dev.off()
+
+
+
+
+
+
+Ca.ph.loc3<-read.csv('CA_pH_Loc3.csv')
+
+
+#________________________________________________________________________________________________________________________________
+
+
+###### Calcium precipitation test 
+#########################################################################################################
+
+Ca.Mg.K<-read.csv('C:/Users/fanny/OneDrive/Bureau/POND_B/PondB-database/Ca_Mg_K.csv')
+Ca.Mg.K$Date.ymd.<- as.Date(Ca.Mg.K$Date.ymd.)
+
+png("Ca.Mg.K_paper.png", width=5, height=3, units='in', res=200)
+
+Ca.Mg.K_plot <- ggplot(data=Ca.Mg.K, aes(x = meq, y = Depth_av, color=factor(Date.ymd.))) +
+  # scale_x_date(date_labels = "%b/%d")+
+  
+  geom_point( size = 1) +
+  #geom_smooth(orientation = "y")+
+  #geom_smooth(aes(group = Average), method = "lm", se = FALSE)+
+  #geom_path() +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_wrap(vars(param), ncol = 4,scales="free_x" ) + 
+  scale_y_reverse() + # scale_x_continuous(position = 'top')+
+  geom_hline(yintercept = c(5, 7.75), col = "red", lty = 2, size=1, alpha = 0.5)+ 
+  labs(y = "Depth (m)", x = "Water concentration (meq/L)") +
+  scale_fill_viridis(option="magma")+
+  #geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size = 10, face = "bold"))
+#  scale_shape_manual(values = c(21:24))+
+#scale_shape_manual(name = "Dates", 
+#                   breaks=c('2020-10-15', '2021-02-15', '1983-10-02',"1984-02-11" ),
+#                   values = c('2020-10-15'=0, '2021-02-15'=2, "1983-10-02 "=15, "1984-02-11"=17)) #+
+#  scale_color_manual(name='Dates',
+#                     breaks=c('2020-10-15', '2021-02-15', '1983-10-02',"1984-02-11" ),
+#                     values=c('2020-10-15'='blue3', '2021-02-15'='green4', '1983-10-02'='blue3' , '1984-02-11'='green4'))
+#scale_shape_manual(name = "Date", values = c('2020-10-15'=0, '2021-02-15'=2, "1983-10-02 "=15, "1984-02-11"=17))
+
+Ca.Mg.K_plot
+dev.off()
+
+
+
+
+
+#########################################################################################################
+
+Ca.Mg<-read.csv('C:/Users/fanny/OneDrive/Bureau/POND_B/PondB-database/Ca_Mg.csv')
+Ca.Mg$Date.ymd.<- as.Date(Ca.Mg$Date.ymd.)
+
+png("Ca.Mg_paper.png", width=3, height=3, units='in', res=200)
+
+Ca.Mg_plot <- ggplot(data=Ca.Mg, aes(x = eq.eq, y = Depth_av, color=factor(Date.ymd.))) +
+  # scale_x_date(date_labels = "%b/%d")+
+  
+  geom_point( size = 1) +
+  #geom_smooth(orientation = "y")+
+  #geom_smooth(aes(group = Average), method = "lm", se = FALSE)+
+  geom_path() +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  #facet_wrap(vars(param), ncol = 4,scales="free_x" ) + 
+  scale_y_reverse() + # scale_x_continuous(position = 'top')+
+  geom_hline(yintercept = c(5, 7.75), col = "red", lty = 2, size=1, alpha = 0.5)+ 
+  labs(y = "Depth (m)", x = "Mg/Ca (eq/eq)") +
+  scale_color_viridis(discrete=TRUE) +
+  #geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size = 10, face = "bold"))
+
+Ca.Mg_plot
+dev.off()
+
+
+
+
+
+##################### LASER ABLATION DATA ###############################################################################
+########################################################################################################################
+
+Laser<-read.csv('C:/Users/fanny/OneDrive/Bureau/POND_B/PondB-database/PondB_LaserAblationL3D4.csv')
+#compute the correlation matrix, 
+library("Hmisc")
+res2 <- rcorr(as.matrix(Laser))
+res2
+
+# Extract the correlation coefficients
+res2$r
+# Extract p-values
+res2$P
+
+
+library("PerformanceAnalytics")
+png("LaserAblationL3D4.png", width=4, height=4, units='in', res=200)
+chart.Correlation(Laser, histogram=TRUE, pch=19)
+dev.off()
+#In the above plot:
+#  
+#  The distribution of each variable is shown on the diagonal.
+#On the bottom of the diagonal : the bivariate scatter plots with a fitted line are displayed
+#On the top of the diagonal : the value of the correlation plus the significance level as stars
+#Each significance level is associated to a symbol : p-values(0, 0.001, 0.01, 0.05, 0.1, 1) <=> symbols("***", "**", "*", ".", " ")
+
+
+# test pca
+
+library(FactoMineR)
+library(FactoInvestigate)
+data(Laser)
+res.pca = PCA(Laser,  graph=FALSE)
+Investigate(res.pca)
+# Read in .csv file containing all chemistry data associated with CTD data
+data.frame(colnames(Laser))
+# select only columns needed
+#To see the structure of the data, type this
+str(Laser)
+
+fviz_pca_var(res.pca, col.var="contrib")
+png("LaserAblationL3D4_PCA.png", width=4, height=4, units='in', res=200)
+plot(res.pca, choix = "var")
+dev.off()
+
+
+#get_eigenvalue(res.famd): Extract the eigenvalues/variances retained by each dimension (axis).
+#fviz_eig(res.famd): Visualize the eigenvalues/variances.
+#get_famd_ind(res.famd): Extract the results for individuals.
+#get_famd_var(res.famd): Extract the results for quantitative and qualitative variables.
+#fviz_famd_ind(res.famd), fviz_famd_var(res.famd): Visualize the results for individuals and variables, respectively.
+
+
+get_eigenvalue(water.chem.famd)
+get_famd_var(water.chem.famd)
+
+var <- get_famd_var(water.chem.famd)
+head(var$cos2)
+
+
+
+# Plot of variables
+fviz_famd_var(water.chem.famd, repel = TRUE)
+# Contribution to the first dimension
+fviz_contrib(water.chem.famd, "var", axes = 1)
+# Contribution to the second dimension
+fviz_contrib(water.chem.famd, "var", axes = 2)
+
+
+# graph of qualitative variables
+fviz_famd_var(water.chem.famd, "quali.var", col.var = "cos2", 
+              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")
+)
+
+fviz_famd_var(water.chem.famd, "quanti.var", col.var = "cos2",   repel = TRUE)
+fviz_famd_var(water.chem.famd, "qualy.var", col.var = "cos2",   repel = TRUE)
+
+# graph of individuals
+ind <- get_famd_ind(water.chem.famd)
+ind
+
+fviz_mfa_ind(water.chem.famd, 
+             habillage = "Label", # color by groups 
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+             addEllipses = TRUE, ellipse.type = "confidence", 
+             repel = TRUE # Avoid text overlapping
+) 
+
+
+
+
+
+
+png("FAMD-quality-circle.png", width=15, height=10, units='in', res=200)
+water.chem.corr <- fviz_famd_var(water.chem.famd, "quanti.var", col.var = "cos2",   repel = TRUE) +
+  
+  
+  labs(title = "") +
+  
+  theme(axis.title = element_text(size = rel(1.0), vjust =.5),
+        
+        legend.position = "top",
+        legend.justification = "center",
+        legend.margin = margin(0,0,0,0),
+        legend.box.margin = margin(-8,-8,-8,-8),#c(.2,.92), 
+        legend.background = element_rect(linetype = "solid", colour = "white"),
+        legend.direction = "horizontal",# legend.key.size = unit(1,"line"),
+        legend.text = element_text(color="black", size = 10), legend.title = element_text(color = "black", size = 12)) +
+  
+  guides(color = guide_colourbar("Representation quality", title.position = "top", barwidth = 8)) + #+
+  
+  scale_color_gradient2(limits = c(0.0, .9), low ="#00AFBB", mid ="#E7B800", high ="#FC4E07", midpoint = .45, breaks = seq(0.2,0.9, 0.2))
+
+water.chem.corr <- water.chem.corr + theme(panel.grid.major=element_blank(),  
+                                           panel.grid.minor=element_blank(),
+                                           panel.background=element_blank(),
+                                           axis.line=element_line(colour="black"), 
+                                           axis.text.x=element_text(colour="black"), 
+                                           axis.text.y=element_text(colour="black"),
+                                           plot.subtitle=element_text(size=12, hjust=-.25, 
+                                                                      face="bold", 
+                                                                      color="black"),
+                                           panel.border = element_rect(color = "black", 
+                                                                       linewidth =  1.05, 
+                                                                       fill = NA, 
+                                                                       linetype= 'solid'),
+                                           plot.margin = unit(c(0, 1, .1, .1), "cm"))
+
+
+water.chem.corr
+dev.off()
+################################################
+#################################################
+
+
+png("FAMD-qualy-var.png", width=15, height=10, units='in', res=200)
+water.chem.var <- fviz_famd_var(water.chem.famd,"quali.var", col.var = "cos2",   repel = TRUE) +
+  
+  
+  labs(title = "") +
+  
+  theme(axis.title = element_text(size = rel(1.0), vjust =.5),
+        
+        legend.position = "top",
+        legend.justification = "center",
+        legend.margin = margin(0,0,0,0),
+        legend.box.margin = margin(-8,-8,-8,-8),#c(.2,.92), 
+        legend.background = element_rect(linetype = "solid", colour = "white"),
+        legend.direction = "horizontal",# legend.key.size = unit(1,"line"),
+        legend.text = element_text(color="black", size = 10), legend.title = element_text(color = "black", size = 12)) +
+  
+  guides(color = guide_colourbar("Representation quality", title.position = "top", barwidth = 8)) + #+
+  
+  scale_color_gradient2(limits = c(0.0, .9), low ="#00AFBB", mid ="#E7B800", high ="#FC4E07", midpoint = .45, breaks = seq(0.2,0.9, 0.2))
+
+water.chem.var <- water.chem.var + theme(panel.grid.major=element_blank(),  
+                                         panel.grid.minor=element_blank(),
+                                         panel.background=element_blank(),
+                                         axis.line=element_line(colour="black"), 
+                                         axis.text.x=element_text(colour="black"), 
+                                         axis.text.y=element_text(colour="black"),
+                                         plot.subtitle=element_text(size=12, hjust=-.25, 
+                                                                    face="bold", 
+                                                                    color="black"),
+                                         panel.border = element_rect(color = "black", 
+                                                                     linewidth =  1.05, 
+                                                                     fill = NA, 
+                                                                     linetype= 'solid'),
+                                         plot.margin = unit(c(0, 1, .1, .1), "cm"))
+
+
+water.chem.var
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+####### EXTRA not used for the paper ############################################################################################
+####### GRAPHS ################################################################################################################
+
+png("Loc3_yearly_temp.png", width=10, height=2, units='in', res=200)
+
+Temp_seasonal_Plot <- ggplot(data=water.temp.0.5m,aes(y = Average, x = date)) +
+   geom_line_exaggerate(size=1, alpha = 1, color="blue") +
+  #geom_line_exaggerate(data=water.temp.2m,aes(y = Average, x = date),size=1, alpha = 1, color="blue") +
+ # geom_errorbar(data=water.temp.2m,aes(ymin = Average - ci, ymax = Average + ci), size=0.2, colour="black", alpha = 0.5) +
+ geom_ribbon(data=water.temp.0.5m, aes(ymin=Average+1, ymax=Average-1), alpha=0.2, fill = "blue", 
+              color = "black", linetype = "dotted")+
+  geom_line(data=pinder92.temp.0.5m,aes(y = temp, x = Date),size=1, alpha = 1, color="blue", linetype="dotted") +
+  
+
+  geom_line(data=water.temp.6m,aes(y = Average, x = date),size=1, alpha = 1, color="red") +
+  geom_ribbon(data=water.temp.6m, aes(ymin=Average+0.5, ymax=Average-0.5), alpha=0.2, fill = "red", 
+              color = "black", linetype = "dotted")+
+  
+  geom_line(data=water.temp.9m,aes(y = Average, x = date),size=1, alpha = 1, color="green") +
+  geom_ribbon(data=water.temp.9m, aes(ymin=Average+0.5, ymax=Average-0.5), alpha=0.2, fill = "green", 
+              color = "black", linetype = "dotted")+
+ # geom_errorbar(data=water.temp.8m,aes(ymin = Average - sd, ymax = Average + sd), size=0.2, colour="black", alpha = 0.5) +
+  scale_color_identity(
+    guide = guide_legend(),
+    breaks = c("blue", "red"),
+    labels = c("2m", "8m")
+  )+
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  #facet_geochem_gridh(vars(param),  grouping = vars(Date.mdy.), scales = "free_x") + 
+  #scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "Date", y = "Water Temperature (?C)") +
+ #  geom_errorbarh(aes(xmin = Average - ci, xmax = Average + ci), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) +
+  scale_x_date(date_labels = "%m")
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+Temp_seasonal_Plot
+dev.off()
+
+
+######_________________________________________________________________________________
+water.O2.loc3<- subset(water.chem, Location=="Loc3"&param=="O2")
+
+water.O2.0m<- subset(water.chem, Location=="Loc3"&param=="O2"&Depth_bin2==0.5)
+
+water.O2.6m<- subset(water.chem, Location=="Loc3"&param=="O2"&Depth_bin2==6)
+
+water.O2.9m<- subset(water.chem, Location=="Loc3"&param=="O2"&Depth_bin2==9)
+
+#Water.O22_8m<-bind_rows(water.temp.2m, water.temp.8m)
+
+png("Loc3_yearly_O2.png", width=10, height=3, units='in', res=200)
+
+O2_seasonal_Plot <- ggplot(data=water.O2.0m,aes(y = Average, x = date)) +
+
+  geom_line_exaggerate(size=1, alpha = 1, color="blue") +
+  #geom_line_exaggerate(data=water.temp.2m,aes(y = Average, x = date),size=1, alpha = 1, color="blue") +
+  # geom_errorbar(data=water.temp.2m,aes(ymin = Average - ci, ymax = Average + ci), size=0.2, colour="black", alpha = 0.5) +
+  geom_ribbon(data=water.O2.0m, aes(ymin=Average+1, ymax=Average-1), alpha=0.2, fill = "blue", 
+              color = "black", linetype = "dotted")+
+  
+  geom_line(data=water.O2.6m,aes(y = Average, x = date),size=1, alpha = 1, color="red") +
+  geom_ribbon(data=water.O2.6m, aes(ymin=Average+0.5, ymax=Average-0.5), alpha=0.2, fill = "red", 
+              color = "black", linetype = "dotted")+
+  # geom_errorbar(data=water.temp.8m,aes(ymin = Average - ci, ymax = Average + ci), size=0.2, colour="black", alpha = 0.5) +
+  scale_color_identity(
+    guide = guide_legend(),
+    breaks = c("blue", "red"),
+    labels = c("2m", "8m")
+  )+
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  #facet_geochem_gridh(vars(param),  grouping = vars(Date.mdy.), scales = "free_x") + 
+  #scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "Date", y = "Dissolved Oxygen (%)") +
+  #  geom_errorbarh(aes(xmin = Average - ci, xmax = Average + ci), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) 
+#scale_x_date(date_labels = "%m-%Y")
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+O2_seasonal_Plot
+dev.off()
+
+
+######_________________________________________________________________________________
+water.Fe.loc3<- subset(water.chem, Location=="Loc3"&param=="Fe")
+
+water.Fe.2m<- subset(water.chem, Location=="Loc3"&param=="Fe"&Depth_bin2==2)
+water.Fe.8m<- subset(water.chem, Location=="Loc3"&param=="Fe"&Depth_bin2==8)
+Water.Fe2_8m<-bind_rows(water.temp.2m, water.temp.8m)
+
+png("Loc3_yearly_Fe.png", width=10, height=3, units='in', res=200)
+
+Fe_seasonal_Plot <- ggplot() +
+  geom_line_exaggerate(data=water.Fe.2m,aes(y = Average, x = date),size=1, alpha = 1, color="blue") +
+  # geom_errorbar(data=water.temp.2m,aes(ymin = Average - ci, ymax = Average + ci), size=0.2, colour="black", alpha = 0.5) +
+  # geom_ribbon(data=water.temp.2m,aes(ymin=Average+0.5, ymax=Average-0.5), alpha=0.1, fill = "green", 
+  #             color = "black", linetype = "dotted")+
+  
+  geom_line(data=water.Fe.8m,aes(y = Average, x = date),size=1, alpha = 1, color="red") +
+  # geom_errorbar(data=water.temp.8m,aes(ymin = Average - ci, ymax = Average + ci), size=0.2, colour="black", alpha = 0.5) +
+  scale_color_identity(
+    guide = guide_legend(),
+    breaks = c("blue", "red"),
+    labels = c("2m", "8m")
+  )+
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  #facet_geochem_gridh(vars(param),  grouping = vars(Date.mdy.), scales = "free_x") + 
+  #scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "Date", y = "Water temperature (C)") +
+  #  geom_errorbarh(aes(xmin = Average - ci, xmax = Average + ci), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+Fe_seasonal_Plot
+dev.off()
+
+
+
+################################################################################################################################
+######################
+
+
+
+
+Temp_study <- read.csv('Database-PondB_WaterColumn_All.csv',na.strings = c("NA"))
+Temp_study$Average <- as.numeric(Temp_study$Average )
+Temp_study2021<- Temp_study[Temp_study$date >= "2020-10-01" & Temp_study$date <= "2021-12-31", ]
+
+write.table(Temp_study2021,"temp-study.csv",sep="\t",row.names=FALSE)
+Temp_study.datecorrected <- read.csv('temp-study.csv',sep="\t")
+
+Temp_study.loc3<- subset(Temp_study.datecorrected, Location=="Loc3"&param=="Temp")
+Historical_temp<-read.csv('historical_temp.csv')
+
+historical_temp2<-read.csv('historical_temp2.csv')
+
+png("Epilion-depth-historical.png", width=15, height=10, units='in', res=200)
+
+Temp_study_loc3_plot <- ggplot(data=historical_temp2, aes(x = Average, y = Depth_av, stroke = 1.2, color=Year)) +
+  # scale_x_date(date_labels = "%b/%d")+
+  #scale_color_manual(values=c("pink", "purple","blue")) +
+  geom_point( size = 2) +
+  facet_wrap(vars(Month)) + 
+  scale_y_reverse() + # scale_x_continuous(position = 'top')+
+  geom_hline(yintercept = c(2.75, 6.75), col = "red", lty = 2, size=1.5, alpha = 0.7)+ 
+  labs(y = "Depth (m)", x = "Water Temperature (C)") +
+ # geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 18, face = "bold"),
+         axis.text.x = element_text( size = 18,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 18, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size = 18, face = "bold")) +
+  scale_shape_manual(name = "year", values = c('2021'=0,'1987'=1, '1983'=2))
+
+Temp_study_loc3_plot
+dev.off()
+
+
+
+Cond_study.loc3<- subset(Temp_study.datecorrected, Location=="Loc3"&param=="Cond")
+
+
+png("Epilion-depth_cond.png", width=15, height=10, units='in', res=200)
+
+Cond_study_loc3_plot <- ggplot(data=Cond_study.loc3, aes(x = Average, y = Depth_av, stroke = 1.2)) +
+  # scale_x_date(date_labels = "%b/%d")+
+  
+  geom_point(colour = "orange", size = 2) +
+  #geom_smooth(orientation = "y")+
+  #geom_smooth(aes(group = Average), method = "lm", se = FALSE)+
+  #geom_path() +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_wrap(vars(date), ncol = 4) + 
+  scale_y_reverse() + # scale_x_continuous(position = 'top')+
+  geom_hline(yintercept = c(2.75, 6.75), col = "red", lty = 2, size=1.5, alpha = 0.7)+ 
+  labs(y = "Depth (m)", x = "Conductivity (uS/cm)") +
+  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 18, face = "bold"),
+         axis.text.x = element_text( size = 18,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 18, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size = 18, face = "bold")) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+Cond_study_loc3_plot
+dev.off()
+
+
+
+
+O2_study.loc3<- subset(Temp_study.datecorrected, Location=="Loc3"&param=="O2"&unit=="% saturation")
+
+
+png("Epilion-depth_O2.png", width=15, height=10, units='in', res=200)
+
+O2_study_loc3_plot <- ggplot(data=O2_study.loc3, aes(x = Average, y = Depth_av, stroke = 1.2)) +
+  # scale_x_date(date_labels = "%b/%d")+
+  
+  geom_point(colour = "green", size = 2) +
+  #geom_smooth(orientation = "y")+
+  #geom_smooth(aes(group = Average), method = "lm", se = FALSE)+
+  #geom_path() +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_wrap(vars(date), ncol = 4) + 
+  scale_y_reverse() + # scale_x_continuous(position = 'top')+
+  geom_hline(yintercept = c(2.75, 6.75), col = "red", lty = 2, size=1.5, alpha = 0.7)+ 
+  labs(y = "Depth (m)", x = "Oxygen (% saturation)") +
+  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 18, face = "bold"),
+         axis.text.x = element_text( size = 18,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 18, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size = 18, face = "bold")) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+O2_study_loc3_plot
+dev.off()
+
+
+
+
+
+# Read in .csv file containing all chemistry data associated with CTD data
+
+
+
+
+
+
+
+
+Temp_study <- read.csv('Database-PondB_WaterColumn_All.csv',na.strings = c("NA"))
+Temp_study$Average <- as.numeric(Temp_study$Average )
+Temp_study2021<- Temp_study[Temp_study$date >= "2020-10-01" & Temp_study$date <= "2021-12-31", ]
+
+write.table(Temp_study2021,"water-chem-2021.csv",sep="\t",row.names=FALSE)
+Temp_study.datecorrected <- read.csv('water-chem-2021.csv',sep="\t")
+
+Temp_study.loc3<- subset(Temp_study.datecorrected, Location=="Loc3"&param=="Temp")
+
+png("Epilion-depth.png", width=15, height=10, units='in', res=200)
+
+Temp_study_loc3_plot <- ggplot(data=Temp_study.loc3, aes(x = Average, y = Depth_av, stroke = 1.2)) +
+  # scale_x_date(date_labels = "%b/%d")+
+  
+  geom_point(colour = "blue", size = 2) +
+  #geom_smooth(orientation = "y")+
+  #geom_smooth(aes(group = Average), method = "lm", se = FALSE)+
+  #geom_path() +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_wrap(vars(date), ncol = 3) + 
+  scale_y_reverse() + # scale_x_continuous(position = 'top')+
+  geom_hline(yintercept = c(2.75, 6.75), col = "red", lty = 2, size=1.5, alpha = 0.7)+ 
+  labs(y = "Depth (m)", x = "Water Temperature (C)") +
+  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 18, face = "bold"),
+         axis.text.x = element_text( size = 18,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 18, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size = 18, face = "bold")) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+Temp_study_loc3_plot
+dev.off()
+
+
+
+Cond_study.loc3<- subset(Temp_study.datecorrected, Location=="Loc3"&param=="Cond")
+
+
+png("Epilion-depth_cond.png", width=15, height=10, units='in', res=200)
+
+Cond_study_loc3_plot <- ggplot(data=Cond_study.loc3, aes(x = Average, y = Depth_av, stroke = 1.2)) +
+  # scale_x_date(date_labels = "%b/%d")+
+  
+  geom_point(colour = "orange", size = 2) +
+  #geom_smooth(orientation = "y")+
+  #geom_smooth(aes(group = Average), method = "lm", se = FALSE)+
+  #geom_path() +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_wrap(vars(date), ncol = 4) + 
+  scale_y_reverse() + # scale_x_continuous(position = 'top')+
+  geom_hline(yintercept = c(2.75, 6.75), col = "red", lty = 2, size=1.5, alpha = 0.7)+ 
+  labs(y = "Depth (m)", x = "Conductivity (uS/cm)") +
+  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 18, face = "bold"),
+         axis.text.x = element_text( size = 18,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 18, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size = 18, face = "bold")) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+Cond_study_loc3_plot
+dev.off()
+
+
+
+
+O2_study.loc3<- subset(Temp_study.datecorrected, Location=="Loc3"&param=="O2"&unit=="% saturation")
+
+
+png("Epilion-depth_O2.png", width=15, height=10, units='in', res=200)
+
+O2_study_loc3_plot <- ggplot(data=O2_study.loc3, aes(x = Average, y = Depth_av, stroke = 1.2)) +
+  # scale_x_date(date_labels = "%b/%d")+
+  
+  geom_point(colour = "green", size = 2) +
+  #geom_smooth(orientation = "y")+
+  #geom_smooth(aes(group = Average), method = "lm", se = FALSE)+
+  #geom_path() +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_wrap(vars(date), ncol = 4) + 
+  scale_y_reverse() + # scale_x_continuous(position = 'top')+
+  geom_hline(yintercept = c(2.75, 6.75), col = "red", lty = 2, size=1.5, alpha = 0.7)+ 
+  labs(y = "Depth (m)", x = "Oxygen (% saturation)") +
+  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 18, face = "bold"),
+         axis.text.x = element_text( size = 18,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 18, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size = 18, face = "bold")) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+O2_study_loc3_plot
+dev.off()
+
+
+
+Redox_species <- read.csv('Redox-summer-winter.csv',sep=",")
+
+
+png("Redox-summer-winter.png", width=10, height=5, units='in', res=200)
+
+Redox_species_plot <- ggplot(data=Redox_species, aes(x = Average, y = Depth_av, color = factor(Date2))) +
+  # scale_x_date(date_labels = "%b/%d")+
+  
+  geom_point( size = 2) +
+  #geom_smooth(orientation = "y")+
+  #geom_smooth(aes(group = Average), method = "lm", se = FALSE)+
+  #geom_path() +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_wrap(vars(param), ncol = 4,, scales = "free") + 
+  scale_y_reverse() + scale_x_continuous(trans='log10',position = 'top')+
+  geom_hline(yintercept = c(2.75, 6.75), col = "red", lty = 2, size=1.5, alpha = 0.7)+ 
+  labs(y = "Depth (m)", x = "Concentration (ppb)") +
+  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 12, face = "bold"),
+         axis.text.x = element_text( size = 12,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 12, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size = 18, face = "bold")) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+Redox_species_plot
+dev.off()
+
+
+
+
+
+
+
+
+
+############################################################################################################
+######################################################################################################
+############################################################################################################
+#################################### figures for the paper ##################################################################
+# Read in .csv file containing all chemistry data associated with CTD data
+water.chem <- read.csv('water-chem-sum.csv',sep="\t")
+water.chem$date<- as.Date(water.chem$date)
+water.chem$Average <- as.numeric(water.chem$Average )
+water.chem.loc3<- subset(water.chem, Location=="Loc3"&param=="Temp")
+
+
+water.chem.loc3<- subset(water.chem, Location=="Loc3"&param=="Temp")
+
+
+png("Temp.loc3.png", width=17, height=11, units='in', res=200)
+
+temp.loc3 <- ggplot(data=water.chem.loc3, aes(x = date, y = Average, color = factor(Depth_bin2),  stroke = 1.2)) +
+  scale_x_date(date_labels = "%b/%d")+
+  # geom_ribbon(aes(ymin = Average - ci,
+  #                  ymax = Average + ci,
+  #                  group=Depth_bin2),
+  #              fill = "steelblue2") + 
+  #  geom_line(color = "firebrick", size = 1)+
+  
+  #  geom_line(size=1, alpha = 1) +
+  #geom_smooth(orientation = "y")+
+  #  geom_path() +
+  
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+# facet_geochem_gridh(vars(param),  grouping = vars(Location), scales = "free_x") + 
+#  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+#  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+labs(x = "", y = "Temperature (C)", color = "Depth (m)") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+temp.loc3
+dev.off()
+
+
+
+
+water.chem.Cond.loc3<- subset(water.chem, Location=="Loc3"&param=="Cond")
+
+
+png("Cond.loc3.png", width=17, height=11, units='in', res=200)
+
+Cond.loc3 <- ggplot(data=water.chem.Cond.loc3, aes(x = date, y = Average, color = factor(Depth_bin2),  stroke = 1.2)) +
+  # scale_x_date(date_labels = "%b/%d")+
+  
+  geom_line(size=1, alpha = 1) +
+  #geom_smooth(orientation = "y")+
+  #geom_path() +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  # facet_geochem_gridh(vars(param),  grouping = vars(Location), scales = "free_x") + 
+  #  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "", y = "Temperature (C)", color = "Depth (m)") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+Cond.loc3 
+dev.off()
+
+
+
+
+
+As_Fe <- read.csv('As_Fe_Total_data.csv',sep=",")
+
+water.as.loc3<- subset(water.chem, Location=="Loc3"&param=="As")
+
+png("As.loc3.png", width=17, height=11, units='in', res=200)
+
+As.loc3 <- ggplot(data=water.as.loc3, aes(x = date, y = Average, color = factor(Depth_bin2),  stroke = 1.2, group = 1)) +
+  geom_line(size=1, alpha = 1) +
+  scale_y_continuous(trans='log10') +
+  # geom_smooth(aes(group = Temp), method = "lm", se = FALSE)+
+  geom_path() +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  # facet_geochem_gridh(vars(param),  grouping = vars(Location), scales = "free_x") + 
+  #  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "", y = "Temperature (C)", color = "Depth (m)") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+As.loc3
+dev.off()
+
+
+
+water.fe.loc3<- subset(water.chem, Location=="Loc3"&param=="Fe")
+png("Fe.loc3.png", width=17, height=11, units='in', res=200)
+
+Fe.loc3 <- ggplot(data=water.fe.loc3, aes(x = date, y = Average, color = factor(Depth_bin2),  stroke = 1.2, group = 1)) +
+  geom_line(size=1, alpha = 1) +
+  scale_y_continuous(trans='log10') +
+  # geom_smooth(aes(group = Temp), method = "lm", se = FALSE)+
+  geom_path() +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  # facet_geochem_gridh(vars(param),  grouping = vars(Location), scales = "free_x") + 
+  #  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "", y = "Temperature (C)", color = "Depth (m)") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+Fe.loc3
+dev.off()
+
+
+
+As_Fe <- read.csv('As_Fe_Total_data.csv',sep=",")
+
+png("As_Fe_Total_data.png", width=17, height=11, units='in', res=200)
+
+As_FePlot <- ggplot(data=As_Fe, aes(x = Average, y = Depth_av, color = factor(Date.mdy.),  stroke = 1.2)) +
+  geom_point(size=1, alpha = 1) +
+  geom_path(linetype=2) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_geochem_gridh(vars(param),  grouping = vars(Date.mdy.), scales = "free_x") + 
+  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "", y = "Depth (m)", color = "Date") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+As_FePlot
+dev.off()
+
+
+
+
+
+
+###################################################################################################################################
+#################################################################################################################################
+###################################################################################################################################
+
+
+
+water.data <- read.csv('Database-PondB_WaterColumn_All.csv')
+water.data$Average <- as.numeric(water.data$Average )
+water.data$Date.ymd.<- as.Date(water.data$Date.ymd.)
+water.loc3.Fe<- subset(water.data, Location=="Loc3"&param==c("Fe","FeII")&unit=="ppm")
+#extract a specific year
+water.loc3.Fe_2021<- water.loc3.Fe %>%
+  filter(Date.ymd. >= as.Date('2020-08-31') & Date.ymd. <= as.Date('2021-12-31'))
+
+#water.loc3.Fe_selected<- water.loc3.Fe %>%
+#  filter(Date.ymd. == '2020-10-15' & Date.ymd. =='2021-02-15')
+
+#filter(Date.ymd. == c(as.Date('2020-10-15'),as.Date('2021-02-15'),as.Date('2021-05-03'),as.Date('2021-08-02'),as.Date('2021-11-04')))
+
+png("Fe_Total_data.png", width=17, height=11, units='in', res=200)
+
+water.loc3.FePlot <- ggplot(data=water.loc3.Fe_2021, aes(x = Average, y = Depth_av, color = factor(param), shape = factor(TotalVsFiltered), stroke = 1.2)) +
+  geom_point(size=2.5, alpha = 0.5) +
+  #geom_path(linetype=2) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_wrap(~Date.ymd.)+
+  #facet_geochem_wrap(vars(Date.mdy.), scales = "free_x") + 
+  scale_y_reverse() + #scale_x_log10() + breaks = seq(10, 0, by = -2)
+  scale_x_continuous(lim=c(0,30), breaks = seq(0,50, by = 10)) + #, labels = scales::scientific
+  
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+ # labs(x = "", y = "Depth11,-0.5), breaks = seq(10, 0, by = -2)) +
+#  scale_y_continuous(lim= (m)", color = "Date") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+water.loc3.FePlot
+dev.off()
+
+
+
+water.loc3.As<- subset(water.data, Location=="Loc3"&param=="As"&unit=="ppm")
+#extract a specific year
+water.loc3.As_2021<- water.loc3.As %>%
+  filter(Date.ymd. >= as.Date('2020-08-31') & Date.ymd. <= as.Date('2021-12-31'))
+
+
+
+png("As_Total_data.png", width=17, height=11, units='in', res=200)
+
+water.loc3.AsPlot <- ggplot(data=water.loc3.As_2021, aes(x = Average, y = Depth_av, color = factor(param), shape = factor(TotalVsFiltered), stroke = 1.2)) +
+  geom_point(size=2, alpha = 1) +
+  #geom_path(linetype=2) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_wrap(~Date.ymd.)+
+  #facet_geochem_wrap(vars(Date.mdy.), scales = "free_x") + 
+  scale_y_reverse() + scale_x_log10() +
+ # scale_x_continuous(lim=c(0,0.1), breaks = seq(0,0.1, by = 0.02)) + #, labels = scales::scientific
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "", y = "Depth (m)", color = "Date") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+water.loc3.AsPlot
+dev.off()
+
+
+
+water.loc3.Mn<- subset(water.data, Location=="Loc3"&param=="Mn"&unit=="ppm")
+#extract a specific year
+water.loc3.Mn_2021<- water.loc3.Mn %>%
+  filter(Date.ymd. >= as.Date('2020-08-31') & Date.ymd. <= as.Date('2021-12-31'))
+
+
+
+png("Mn_Total_data.png", width=17, height=11, units='in', res=200)
+
+water.loc3.MnPlot <- ggplot(data=water.loc3.Mn_2021, aes(x = Average, y = Depth_av, color = factor(param), shape = factor(TotalVsFiltered), stroke = 1.2)) +
+  geom_point(size=2, alpha = 1) +
+  #geom_path(linetype=2) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_wrap(~Date.ymd.)+
+  #facet_geochem_wrap(vars(Date.mdy.), scales = "free_x") + 
+  scale_y_reverse() + scale_x_log10() +
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "", y = "Depth (m)", color = "Date") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+water.loc3.MnPlot
+dev.off()
+
+
+
+
+water.loc3.Al<- subset(water.data, Location=="Loc3"&param=="Al"&unit=="ppm")
+#extract a specific year
+water.loc3.Al_2021<- water.loc3.Al %>%
+  filter(Date.ymd. >= as.Date('2020-08-31') & Date.ymd. <= as.Date('2021-12-31'))
+
+
+
+png("Al_Total_data.png", width=17, height=11, units='in', res=200)
+
+water.loc3.AlPlot <- ggplot(data=water.loc3.Al_2021, aes(x = Average, y = Depth_av, color = factor(param), shape = factor(TotalVsFiltered), stroke = 1.2)) +
+  geom_point(size=2, alpha = 1) +
+  #geom_path(linetype=2) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_wrap(~Date.ymd.)+
+  #facet_geochem_wrap(vars(Date.mdy.), scales = "free_x") + 
+  scale_y_reverse() + scale_x_log10() +
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "", y = "Depth (m)", color = "Date") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+water.loc3.AlPlot
+dev.off()
+
+########################## Test with all 
+water.loc3.Al<- subset(water.data, Location=="Loc3"&param=="Al"&unit=="ppm")
+#extract a specific year
+water.loc3.Al_2021<- water.loc3.Al %>%
+  filter(Date.ymd. >= as.Date('2020-08-31') & Date.ymd. <= as.Date('2021-12-31'))
+
+
+
+water.loc3.Fe_2021
+water.loc3.Mn_2021
+water.loc3.As_2021
+
+water.loc3.Fe_2021_bis <- water.loc3.Fe_2021[which(water.loc3.Fe_2021$Date.ymd. %in% c('2020-12-15', '2021-02-15','2021-05-03', '2021-08-02', '2021-11-04','2020-10-15')),]
+water.loc3.Mn_2021_bis <- water.loc3.Mn_2021[which(water.loc3.Mn_2021$Date.ymd. %in% c('2020-12-15', '2021-02-15','2021-05-03', '2021-08-02', '2021-11-04','2020-10-15')),]
+water.loc3.As_2021_bis <- water.loc3.As_2021[which(water.loc3.As_2021$Date.ymd. %in% c('2020-12-15', '2021-02-15','2021-05-03', '2021-08-02', '2021-11-04','2020-10-15')),]
+
+library("ggsci")
+library("ggplot2")
+library("gridExtra")
+
+thermo <- read.csv('Thermocline_calculations.csv')
+thermo$Date.ymd.<- as.Date(thermo$Date.ymd.)
+thermo_2021<- thermo %>%
+  filter(Date.ymd. >= as.Date('2020-08-31') & Date.ymd. <= as.Date('2021-12-31'))
+thermo_2021_bis <- thermo_2021[which(thermo_2021$Date.ymd. %in% c('2020-12-15', '2021-02-15','2021-05-03', '2021-08-02', '2021-11-04','2020-10-15')),]
+
+
+date.labs <- c("December (2020)", "February (2021)", "May (2021)", "August (2021)", "October (2020)", "November (2021)")
+names(date.labs) <- c('2020-12-15', '2021-02-15','2021-05-03', '2021-08-02','2020-10-15', '2021-11-04')
+
+
+png("As.Fe.Mn.2021.png", width=17, height=12, units='in', res=300)
+
+water.loc3.All.Plot <- ggplot() +
+  geom_point(data=water.loc3.Fe_2021_bis, aes(x = Average, y = Depth_av, color = factor(param), shape = factor(TotalVsFiltered)), size=5, alpha = 0.8) +
+  geom_point(data=water.loc3.As_2021_bis, aes(x = Average, y = Depth_av, color = factor(param), shape = factor(TotalVsFiltered)), size=5, alpha = 0.8) +
+  geom_point(data=water.loc3.Mn_2021_bis, aes(x = Average, y = Depth_av, color = factor(param), shape = factor(TotalVsFiltered)), size=5, alpha = 0.8) +
+ # geom_point(data=water.loc3.Al_2021, aes(x = Average, y = Depth_av, color = factor(param), shape = factor(TotalVsFiltered)), size=3, alpha = 0.8) +
+  geom_hline(data = thermo_2021_bis, aes(yintercept = upper, color = "top of epilimnion "), size=1.3) +
+  geom_hline(data = thermo_2021_bis, aes(yintercept = lower, color = "bottom of hypolimnion"), size=1.3) +
+  #geom_path(linetype=2) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_wrap(~Date.ymd., labeller =  as_labeller(date.labs))+
+  #facet_geochem_wrap(vars(Date.mdy.), scales = "free_x") + 
+  scale_y_reverse() + scale_x_log10() +
+  #scale_color_viridis(discrete=TRUE, option = "H") +
+  scale_fill_locuszoom() +
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "Concentration (mg/L)", y = "Depth (m)", color = "Element", shape = "Total vs. Filtered") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 15, face = "bold"),
+         axis.text.x = element_text( size = 15,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 15, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =15),
+        legend.title=element_text(size=15), 
+         legend.text=element_text(size=15))
+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+water.loc3.All.Plot
+
+dev.off()
+

@@ -1,0 +1,464 @@
+
+#####################################################################################################################################################
+# ###########################################################################################################################################
+
+library("FactoMineR")
+# install.packages("PerformanceAnalytics")
+library("PerformanceAnalytics")
+library("factoextra")
+library(ggplot2)
+library("fuzzyjoin")
+library(plyr)
+library(dplyr)
+library(tidyverse)
+library(tidypaleo)
+library(gridExtra)
+library(grid)
+library(ggplot2)
+library(lattice)
+library(cowplot)
+library(ggpubr)
+theme_set(theme_bw(8))
+
+
+### Use individual endpoint folders within 2010_2017 master files merged
+
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(stringr)
+library(missMDA)
+
+rm(list=ls())
+
+
+summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
+                      conf.interval=.95, .drop=TRUE) {
+  library(plyr)
+
+  # New version of length which can handle NA's: if na.rm==T, don't count them
+  length2 <- function (x, na.rm=FALSE) {
+    if (na.rm) sum(!is.na(x))
+    else       length(x)
+  }
+
+  # This does the summary. For each group's data frame, return a vector with
+  # N, mean, and sd
+  datac <- ddply(data, groupvars, .drop=.drop,
+                 .fun = function(xx, col) {
+                   c(N    = length2(xx[[col]], na.rm=na.rm),
+                     mean = mean   (xx[[col]], na.rm=na.rm),
+                     sd   = sd     (xx[[col]], na.rm=na.rm)
+                   )
+                 },
+                 measurevar
+  )
+
+  # Rename the "mean" column
+  datac <- rename(datac, c("mean" = measurevar))
+
+  datac$se <- datac$sd / sqrt(datac$N)  # Calculate standard error of the mean
+
+  # Confidence interval multiplier for standard error
+  # Calculate t-statistic for confidence interval:
+  # e.g., if conf.interval is .95, use .975 (above/below), and use df=N-1
+  ciMult <- qt(conf.interval/2 + .5, datac$N-1)
+  datac$ci <- datac$se * ciMult
+
+  return(datac)
+}
+
+
+##### read in 'final' data tab from PCB master file #######
+
+## set working director to folder containing data file
+setwd("C:/Users/fanny/OneDrive - Clemson University/POND_B/NNSA/data") 
+
+
+#ColloidsLoc3  <- subset(Colloids, Location == "3")
+
+png("AsData.png", width=6, height=3, units='in', res=200)
+
+As_plot <- ggplot(data=ColloidsLoc3, aes(x = As, y = Depth, color = factor(Fraction),  stroke = 1.2)) +
+  geom_point(size=2, alpha = 1) +
+  geom_pointrange(data=ColloidsLoc3, aes(xmin = As - .02, xmax = As + .02), size=0.1, colour="black", alpha = 0.5) +
+ # geom_path(linetype=2) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) +
+  facet_geochem_wrap(vars(Date)) +
+  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+
+  labs(x = "As water concentration (ppb)", y = "Depth (m)", color = "Fraction") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme(plot.title = element_text(size = rel(1.5), face = 'bold',  vjust=1, hjust=.5)) +
+  theme(axis.title.x = element_text(size = 12, vjust =.3)) +
+  theme(axis.title.y = element_text(size = 12, vjust = 2)) +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(legend.position = "right") +
+  theme(legend.text = element_text(size=8))
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+As_plot
+dev.off()
+
+
+
+png("MnData.png", width=6, height=3, units='in', res=200)
+
+Mn_plot <- ggplot(data=ColloidsLoc3, aes(x = Mn, y = Depth, color = factor(Fraction),  stroke = 1.2)) +
+  geom_point(size=2, alpha = 1) +
+  geom_pointrange(data=ColloidsLoc3, aes(xmin = Mn - .02, xmax = Mn + .02), size=0.1, colour="black", alpha = 0.5) +
+  # geom_path(linetype=2) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) +
+  facet_geochem_wrap(vars(Date)) +
+  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+
+  labs(x = "Mn water concentration (ppb)", y = "Depth (m)", color = "Fraction") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme(plot.title = element_text(size = rel(1.5), face = 'bold',  vjust=1, hjust=.5)) +
+  theme(axis.title.x = element_text(size = 12, vjust =.3)) +
+  theme(axis.title.y = element_text(size = 12, vjust = 2)) +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(legend.position = "right") +
+  theme(legend.text = element_text(size=8))
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+Mn_plot
+dev.off()
+
+
+
+png("FeData.png", width=6, height=3, units='in', res=200)
+
+Fe_plot <- ggplot(data=ColloidsLoc3, aes(x = Fe, y = Depth, color = factor(Fraction),  stroke = 1.2)) +
+  geom_point(size=2, alpha = 1) +
+  geom_pointrange(data=ColloidsLoc3, aes(xmin = Fe - .02, xmax = Fe + .02), size=0.1, colour="black", alpha = 0.5) +
+  # geom_path(linetype=2) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) +
+  facet_geochem_wrap(vars(Date)) +
+  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+
+  labs(x = "Fe water concentration (ppb)", y = "Depth (m)", color = "Fraction") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme(plot.title = element_text(size = rel(1.5), face = 'bold',  vjust=1, hjust=.5)) +
+  theme(axis.title.x = element_text(size = 12, vjust =.3)) +
+  theme(axis.title.y = element_text(size = 12, vjust = 2)) +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(legend.position = "right") +
+  theme(legend.text = element_text(size=8))
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+Fe_plot
+dev.off()
+
+
+#########################################################################################################################################
+##########################################################################################################################################
+
+water<-read.csv("CTD-data.csv")
+waterO2 <- subset(water, param == "O2")
+waterTDS <- subset(water, param == "TDS")
+waterTemp <- subset(water, param == "Temp")
+
+png("O2.png", width=3, height=3, units='in', res=200)
+
+O2_plot <- ggplot(data=waterO2, aes(x = Average, y = Depth_av, color = "param ", stroke = 1.2)) +
+  geom_point(size=2, alpha = 1) +
+  geom_pointrange(data=waterO2, aes(xmin = Average - SD, xmax = Average + SD), size=0.1, colour="black", alpha = 0.5) +
+  # geom_path(linetype=2) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) +
+  facet_geochem_wrap(vars(Date2)) +
+  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+
+  labs(x = "O2 (% saturation)", y = "Depth (m)", color = "O2") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme(plot.title = element_text(size = rel(1.5), face = 'bold',  vjust=1, hjust=.5)) +
+  theme(axis.title.x = element_text(size = 12, vjust =.3)) +
+  theme(axis.title.y = element_text(size = 12, vjust = 2)) +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(legend.position = "right") +
+  theme(legend.text = element_text(size=8))
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+O2_plot
+dev.off()
+
+
+
+png("Temp.png", width=3, height=3, units='in', res=200)
+
+Temp_plot <- ggplot(data=waterTemp, aes(x = Average, y = Depth_av,  color = "param", stroke = 1.2)) +
+  geom_point(size=2, alpha = 1) +
+  geom_pointrange(data=waterTemp, aes(xmin = Average - SD, xmax = Average + SD), size=0.1, colour="black", alpha = 0.5) +
+  # geom_path(linetype=2) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) +
+  facet_geochem_wrap(vars(Date2)) +
+  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+
+  labs(x = "Temperature (celcius)", y = "Depth (m)", color = "Temp") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme(plot.title = element_text(size = rel(1.5), face = 'bold',  vjust=1, hjust=.5)) +
+  theme(axis.title.x = element_text(size = 12, vjust =.3)) +
+  theme(axis.title.y = element_text(size = 12, vjust = 2)) +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(legend.position = "right") +
+  theme(legend.text = element_text(size=8))
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+Temp_plot
+dev.off()
+
+
+
+
+ggarrange(As_plot, Mn_plot, Fe_plot,O2_plot, Temp_plot + rremove("x.text"),
+          labels = c("A", "B", "C"),
+          ncol = 1, nrow = 5)
+
+
+#############################################################################################################################################################
+# Read the CSV file
+df <- read.csv("data-filtration-Nov-Feb-June.csv")
+
+# Adjust the size ranges to match the unique Size values in the dataset
+df$Size_fraction <- ifelse(df$Size > 1.2, "Total",
+                           ifelse(df$Size <= 1.2 & df$Size > 0.45, "Particulate",
+                                  ifelse(df$Size <= 0.45 & df$Size > 0.22, "Colloidal",
+                                         ifelse(df$Size <= 0.22, "Free", NA))))
+
+# Check the updated Size_fraction distribution
+print("Updated Size_fraction distribution:")
+print(table(df$Size_fraction))
+
+# Re-run the summarization with the updated Size_fraction
+# Re-run the summarization with Fe and Mn included
+detailed_sums_extended <- df %>%
+  group_by(Date, Depth) %>%
+  summarise(
+    # As fractions
+    Colloidal_As = sum(ifelse(Size_fraction == "Colloidal", As, 0), na.rm = TRUE),
+    Free_As = sum(ifelse(Size_fraction == "Free", As, 0), na.rm = TRUE),
+    Particulate_As = sum(ifelse(Size_fraction == "Particulate", As, 0), na.rm = TRUE),
+    Total_As = sum(ifelse(Size_fraction == "Total", As, 0), na.rm = TRUE),
+    T_As = sum(As, na.rm = TRUE),
+    # Fe fractions
+    Colloidal_Fe = sum(ifelse(Size_fraction == "Colloidal", Fe, 0), na.rm = TRUE),
+    Free_Fe = sum(ifelse(Size_fraction == "Free", Fe, 0), na.rm = TRUE),
+    Particulate_Fe = sum(ifelse(Size_fraction == "Particulate", Fe, 0), na.rm = TRUE),
+    Total_Fe = sum(ifelse(Size_fraction == "Total", Fe, 0), na.rm = TRUE),
+    T_Fe = sum(Fe, na.rm = TRUE),
+    # Mn fractions
+    Colloidal_Mn = sum(ifelse(Size_fraction == "Colloidal", Mn, 0), na.rm = TRUE),
+    Free_Mn = sum(ifelse(Size_fraction == "Free", Mn, 0), na.rm = TRUE),
+    Particulate_Mn = sum(ifelse(Size_fraction == "Particulate", Mn, 0), na.rm = TRUE),
+    Total_Mn = sum(ifelse(Size_fraction == "Total", Mn, 0), na.rm = TRUE),
+    T_Mn = sum(Mn, na.rm = TRUE)
+  )
+
+print("Updated summary with adjusted Size_fraction categories for As, Fe, and Mn:")
+print(head(detailed_sums_extended))
+
+#######################################################################################################
+# Let's break this down by size fraction to see the components
+# Extend the detailed breakdown for Fe and Mn
+# Correct the column name and recreate detailed_sums_extended
+# Recompute the detailed_sums_extended dataframe with the corrected SizeFraction column
+# Re-run the summarization logic to ensure it is correctly grouping and summing the data
+df_location3  <- subset(df, Location == "3")
+detailed_sums_extended2 <- df %>%
+    group_by(Date, Depth) %>%
+    summarise(
+    # As fractions
+        Colloidal_As = sum(ifelse(SizeFraction == "Colloidal", As, 0)),
+        Free_As = sum(ifelse(SizeFraction == "Free", As, 0)),
+        Particulate_As = sum(ifelse(SizeFraction == "Particulate", As, 0)),
+        Total_As = sum(ifelse(SizeFraction == "Total", As, 0)),
+        T_As = sum(As),
+    # Fe fractions
+       Colloidal_Fe = sum(ifelse(SizeFraction == "Colloidal", Fe, 0)),
+        Free_Fe = sum(ifelse(SizeFraction == "Free", Fe, 0)),
+        Particulate_Fe = sum(ifelse(SizeFraction == "Particulate", Fe, 0)),
+        Total_Fe = sum(ifelse(SizeFraction == "Total", Fe, 0)),
+        T_Fe = sum(Fe),
+    # Mn fractions
+        Colloidal_Mn = sum(ifelse(SizeFraction == "Colloidal", Mn, 0)),
+       Free_Mn = sum(ifelse(SizeFraction == "Free", Mn, 0)),
+        Particulate_Mn = sum(ifelse(SizeFraction == "Particulate", Mn, 0)),
+        Total_Mn = sum(ifelse(SizeFraction == "Total", Mn, 0)),
+       T_Mn = sum(Mn)
+      )
+
+# Display the updated dataframe
+#print(head(detailed_sums_extended))
+
+
+
+# Let's fix the data structure and try again
+fe_data <- detailed_sums_extended %>%
+  select(Date, Depth, Free_Fe, Colloidal_Fe, Particulate_Fe, T_Fe) %>%
+  pivot_longer(cols = c(Free_Fe, Colloidal_Fe, Particulate_Fe, T_Fe),
+               names_to = "Fraction", values_to = "Value") %>%
+  mutate(
+    Depth = as.factor(Depth),
+    Fraction = factor(Fraction, levels = c("Free_Fe", "Colloidal_Fe",  "Particulate_Fe", "T_Fe"))
+  )
+
+# Print the structure of the data
+print(head(fe_data))
+
+
+
+# Create the plot with bars side by side using position = "dodge"
+# Create the plot with reversed y-axis
+# Adjust the plot to better handle overlapping labels
+png("Fe_filtration.png", width=12, height=12, units='in', res=200)
+fe_stacked_plot_with_values <- fe_data %>%
+  ggplot(aes(x = Value, y = Depth, fill = Fraction)) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = round(Value, 1)), 
+            position = position_dodge(width = 0.9), 
+            hjust = -0.1, 
+            size = 2.5,
+            check_overlap = TRUE) +  # Add value labels with overlap checking
+  facet_wrap(~Date, ncol = 1) +
+  scale_y_discrete(limits = rev) +  # Reverse the y-axis
+  labs(title = "Iron (Fe) Fractions in filtrate", x = "Fe water concentration (ppb)", y = "Depth (m)") +
+  theme_minimal() +
+  coord_cartesian(clip = "off") +  # Prevent clipping of labels
+  theme(plot.margin = margin(r = 100))+
+  theme(plot.title = element_text(size = rel(1.1), face = 'bold',  vjust=1, hjust=.5)) +
+  theme(axis.title.x = element_text(size = 14, vjust =.3)) +
+  theme(axis.title.y = element_text(size = 14, vjust = 2)) +
+  theme(axis.text.x = element_text(size=14)) +
+  theme(axis.text.y = element_text(size=14)) +
+  theme(legend.position = "right") +
+  theme(legend.text = element_text(size=8))# Add right margin for labels
+
+# Display the plot
+print(fe_stacked_plot_with_values)
+dev.off()
+#####################################################################
+# Filter the data for Mn and reshape it for plotting
+mn_data <- detailed_sums_extended %>%
+  select(Date, Depth, Free_Mn, Colloidal_Mn, Particulate_Mn, T_Mn) %>%
+  pivot_longer(cols = c(Free_Mn, Colloidal_Mn, Particulate_Mn, T_Mn),
+               names_to = "Fraction", values_to = "Value") %>%
+  mutate(
+    Depth = as.factor(Depth),
+    Fraction = factor(Fraction, levels = c("Free_Mn", "Colloidal_Mn",  "Particulate_Mn", "T_Mn"))
+  )
+
+# Create the plot for Mn with value numbers
+png("Mn_filtration.png", width=12, height=12, units='in', res=200)
+mn_stacked_plot_with_values <- mn_data %>%
+  ggplot(aes(x = Value, y = Depth, fill = Fraction)) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = round(Value, 1)), 
+            position = position_dodge(width = 0.9), 
+            hjust = -0.1, 
+            size = 2.5,
+            check_overlap = TRUE) +  # Add value labels with overlap checking
+  facet_wrap(~Date, ncol = 1) +
+  scale_y_discrete(limits = rev) +  # Reverse the y-axis
+  labs(title = "Manganese (Mn) Fractions in filtrate", x = "Mn water concentration (ppb)", y = "Depth (m)") +
+  theme_minimal() +
+  coord_cartesian(clip = "off") +  # Prevent clipping of labels
+  theme(plot.margin = margin(r = 100))+
+  theme(plot.title = element_text(size = rel(1.1), face = 'bold',  vjust=1, hjust=.5)) +
+  theme(axis.title.x = element_text(size = 14, vjust =.3)) +
+  theme(axis.title.y = element_text(size = 14, vjust = 2)) +
+  theme(axis.text.x = element_text(size=14)) +
+  theme(axis.text.y = element_text(size=14)) +
+  theme(legend.position = "right") +
+  theme(legend.text = element_text(size=8))# Add right margin for labels
+
+print(mn_stacked_plot_with_values)
+dev.off()
+
+
+# Clean and fix the code for As data preparation and plotting
+
+# Filter the data for As and reshape it for plotting
+as_data <- detailed_sums_extended %>%
+  select(Date, Depth, Free_As, Colloidal_As, Particulate_As, T_As) %>%
+  pivot_longer(cols = c(Free_As, Colloidal_As, Particulate_As, T_As),
+               names_to = "Fraction", values_to = "Value") %>%
+  mutate(
+    Depth = as.factor(Depth),
+    Fraction = factor(Fraction, levels = c("Free_As", "Colloidal_As",  "Particulate_As", "T_As"))
+  )
+
+# Replace zero or negative values with a small positive value for plotting and label them as <LOD
+as_data <- as_data %>% mutate(
+  Value = ifelse(Value <= 0, 1e-6, Value),  # Replace zero for log scale
+  Label = ifelse(Value == 1e-6, "<LOD", as.character(round(Value, 3)))  # Create labels
+)
+
+# Recreate the plot with a lower threshold for visibility
+png("As_filtration.png", width=12, height=12, units='in', res=200)
+as_stacked_plot_with_lod <- as_data %>%
+  ggplot(aes(x = Value, y = Depth, fill = Fraction)) +
+  geom_col(position = "dodge", data = subset(as_data, Value > 1e-7)) +  # Lower threshold
+  geom_text(aes(label = Label), 
+            position = position_dodge(width = 0.9), 
+            hjust = -0.1, 
+            size = 2.5,
+            check_overlap = TRUE) +
+  facet_wrap(~Date, ncol = 1) +
+  scale_y_discrete(limits = rev) +
+ # scale_x_log10() +
+ # scale_fill_manual(values = c("#1b9e77", "#d95f02", "#7570b3", "#e7298a")) +
+  labs(title = "Arsenic (As) Fractions in filtrate", x = "As water concentration (ppb)", y = "Depth (m)") +
+  theme_minimal() +
+  coord_cartesian(clip = "off") +
+  theme(plot.margin = margin(r = 100))+
+  theme(plot.title = element_text(size = rel(1.1), face = 'bold',  vjust=1, hjust=.5)) +
+  theme(axis.title.x = element_text(size = 14, vjust =.3)) +
+  theme(axis.title.y = element_text(size = 14, vjust = 2)) +
+  theme(axis.text.x = element_text(size=14)) +
+  theme(axis.text.y = element_text(size=14)) +
+  theme(legend.position = "right") +
+  theme(legend.text = element_text(size=8))
+
+
+# Display the plot
+print(as_stacked_plot_with_lod)
+dev.off()
+
+
+
+
+
+#############################################################################
+water<-read.csv("CTD-data.csv")
+waterO2 <- subset(water, param == "O2")
+waterTDS <- subset(water, param == "TDS")
+waterTemp <- subset(water, param == "Temp")
+water2 <- subset(water, param == c("O2","Temp","ORP","pH","Salinity","TDS","BGA","ChlA"))
+
+png("CTD.png", width=10, height=10, units='in', res=200)
+testPlot <- ggplot(data=water, aes(x = Average, y = Depth_av, color = factor(Date2))) +
+  # scale_x_date(date_labels = "%b/%d")+
+  
+  geom_point( size = 2) +
+  #geom_smooth(orientation = "y")+
+  #geom_smooth(aes(group = Average), method = "lm", se = FALSE)+
+  #geom_path() +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_wrap(vars(param), ncol = 4,, scales = "free") + 
+  scale_y_reverse() + scale_x_continuous(trans='log10',position = 'top')+
+  geom_hline(yintercept = c(2.75, 6.75), col = "red", lty = 2, size=1.5, alpha = 0.7)+ 
+  labs(y = "Depth (m)", x = "") +
+  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size = 12, face = "bold")) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+testPlot
+dev.off()

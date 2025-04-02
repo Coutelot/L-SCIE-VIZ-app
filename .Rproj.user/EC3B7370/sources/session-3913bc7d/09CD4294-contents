@@ -1,0 +1,1930 @@
+rm(list = ls())
+mypath = "C:/Users/fanny/OneDrive/Bureau/POND_B/PondB-database"
+setwd(mypath)
+#install.packages("fuzzyjoin")
+#install.packages("sqldf")
+library("fuzzyjoin")
+library(plyr)
+library(dplyr)
+library(tidyverse)
+library(tidypaleo)
+library("FactoMineR")
+# install.packages("PerformanceAnalytics")
+library("PerformanceAnalytics")
+library("factoextra")
+library("gridExtra")
+library("cowplot")
+theme_set(theme_bw(8))
+
+Database<-read.csv("Database-PondB_WaterColumn_All.csv")
+
+Database[,"param"]
+
+# Exclude Ba,CO concentration ... from dataframe
+Database2 <- data.frame(subset(Database, !(param %in% c('O2_conc', 'Ba',  'Li', 'Cs', 'NO3-', 'Sr', 'Th',  'TIC', 'TN', 'TSS','TotalNH3','NH3'))))
+Data21<-read.csv("Water21.csv")
+
+################ Graph all data ###################################################################################################################
+
+png("alldata.png", width=17, height=11, units='in', res=200)
+
+test_all_plot <- ggplot(data=Database2, aes(x = Average, y = Depth_av, color = factor(Date.ymd.),  stroke = 1.2)) +
+  geom_point(size=1, alpha = 1) +
+ # geom_path(linetype=2) +
+ # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_geochem_gridh(vars(param),  grouping = vars(Location), scales = "free_x") + 
+  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+#  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "", y = "Depth (m)", color = "Date") +
+#  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+test_all_plot
+dev.off()
+
+
+
+Majors <- subset(Database2, param == c("Al","Fe", "K", "Mg", "Mn", "Na", "P" ))
+FeData <- subset(Database2, param == c("Fe","FeII"))
+FeTotals <- subset(FeData, TotalVsFiltered == "T")
+FeDissolved <- subset(FeData, TotalVsFiltered == "F")
+FeIITotal <- subset(Database2, param == "FeII"&TotalVsFiltered == "T")
+FeIIDissolved <- subset(Database2, param == "FeII"&TotalVsFiltered == "F")
+
+
+png("FeData.png", width=17, height=11, units='in', res=200)
+
+FeDataPlot <- ggplot(data=FeTotals, aes(x = Average, y = Depth_av, color = factor(Date.ymd.),  stroke = 1.2)) +
+  geom_point(size=1, alpha = 1) +
+  geom_path(linetype=2) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_geochem_gridh(vars(param),  grouping = vars(Date.ymd.), scales = "free_x") + 
+  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "", y = "Depth (m)", color = "Date") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+FeDataPlot
+dev.off()
+
+
+
+
+####################################################################################################################################
+#2021 data
+
+
+Majors <- subset(Data21, param == c("Al","Fe", "K", "Mg", "Mn", "Na", "P" ))
+FeData <- subset(Data21, param == c("Fe","FeII"))
+FeTotals <- subset(FeData, TotalVsFiltered == "TRUE")
+FeDissolved <- subset(FeData, TotalVsFiltered == "FALSE")
+FeIITotal <- subset(Data21, param == "FeII"&TotalVsFiltered == "TRUE")
+FeIIDissolved <- subset(Data21, param == "FeII"&TotalVsFiltered == "FALSE")
+
+
+png("FeData2021.png", width=17, height=11, units='in', res=200)
+
+FeDataPlot <- ggplot(data=FeData, aes(x = Average, y = Depth_av, color = factor(Location),  stroke = 1.2)) +
+  geom_point(size=1, alpha = 1) +
+  geom_path(linetype=1) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_geochem_gridh(vars(param),  grouping = vars(Date.ymd.), scales = "free_x") + 
+  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "", y = "Depth (m)", color = "Date") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+FeDataPlot
+dev.off()
+
+
+##########################################################################################################
+##########################################################################################################
+
+Loc3Data21 <- subset(Data21, Location == "Loc3")
+
+png("Location3-Data2021.png", width=17, height=11, units='in', res=200)
+
+Loc3Data21Plot <- ggplot(data=Loc3Data21, aes(x = Average, y = Depth_av, color = factor(param),  stroke = 1.2)) +
+  geom_point(size=1, alpha = 1) +
+  geom_path(linetype=1) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_geochem_gridh(vars(param),  grouping = vars(Date.ymd.), scales = "free_x") + 
+  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "", y = "Depth (m)", color = "Legend") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+Loc3Data21Plot
+dev.off()
+
+
+
+
+Loc3Data21Chem <- subset(Data21, Location == "Loc3"&param == c("Fe","FeII", "As","O2","Temp" ))
+
+png("Location3-Data2021-Geochem.png", width=17, height=11, units='in', res=200)
+
+Loc3Data21ChemPlot <- ggplot(data=Loc3Data21Chem, aes(x = Average, y = Depth_av, color = factor(param),  stroke = 1.2)) +
+  geom_point(size=1, alpha = 1) +
+  geom_path(linetype=1) +
+  # scale_color_grey(name = "Date",start = 0.8, end = 0.2) + 
+  facet_geochem_gridh(vars(param),  grouping = vars(Date.ymd.), scales = "free_x") + 
+  scale_y_reverse() + #scale_x_continuous(position = 'top')+
+  #  geom_hline(yintercept = c(0, 10), col = "red", lty = 2, alpha = 0.7)+ 
+  labs(x = "", y = "Depth (m)", color = "Legend") +
+  #  geom_errorbarh(aes(xmin = Average - SD, xmax = Average + SD), size=0.2, colour="black", alpha = 0.5) +
+  theme( axis.text = element_text( size = 10, face = "bold"),
+         axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+         axis.title = element_text( size = 10, face = "bold" ),
+         # The new stuff
+         strip.text = element_text(size =10)) #+
+#  scale_shape_manual(name = "Date", values = c('1'=0,'2'=1, '3'=2))
+
+Loc3Data21ChemPlot
+dev.off()
+
+
+
+
+
+##################Temeprature graph  ################################################################################################################
+##################Temeprature graph  ################################################################################################################
+TempLoc3 <- Database[ which(Database$param=="Temp"&Database$Location=="Loc3"), ]
+
+TempLoc3 <- TempLoc3[,-c(22:24)]
+
+Database[,"Average"]
+TempLoc3[,"Average"]
+
+
+TempLoc3$Average <- as.numeric(as.character(TempLoc3$Average))
+TempLoc3$date <- as.Date(TempLoc3$date, origin = "1899-12-30")
+
+library(tidyverse)
+library(lubridate)
+
+#################################################################################
+#################################################################################
+#    TEMPERATURE ################################################################
+
+tiff("Loc3-Temp-date.tiff", width=7, height=5, units='in', res=300)
+TempLoc3Fig <- ggplot(TempLoc3, aes(x = date, y = Depth_av, color = Average)) +
+  geom_point(size=5) +
+  scale_y_reverse() +
+  
+  scale_colour_gradient2(
+    midpoint = 20, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue")
+  ) +
+  labs(x = NULL, y = "Depth (m)", title = "Loc3 - Temperature") 
+TempLoc3Fig
+dev.off()
+
+
+#######################################################################################################
+#######################################################################################################
+# Heat map depth time
+#######################################################################################################
+# temp
+#PondB_temp<-read.csv("PondB_temp.csv")
+#PondB_temp$temp <- as.numeric(as.character(PondB_temp$temp))
+#PondB_temp$date <- as.Date(PondB_temp$date)
+
+#PondB_temp_Loc1 <- PondB_temp[ which(PondB_temp$Location=="Loc1"), ]
+#PondB_temp_Loc2 <- PondB_temp[ which(PondB_temp$Location=="Loc2"), ]
+#PondB_temp_Loc3 <- PondB_temp[ which(PondB_temp$Location=="Loc3"), ]
+#PondB_temp_Loc4 <- PondB_temp[ which(PondB_temp$Location=="Loc4"), ]
+#PondB_temp_Loc5 <- PondB_temp[ which(PondB_temp$Location=="Loc5"), ]
+
+
+#######Loc3#######################################################################################################
+PondB_temp_Loc3 <- Database[ which(Database$param=="Temp"&Database$Location=="Loc3"), ]
+
+PondB_temp_Loc3 <- TempLoc3[,-c(22:24)]
+
+Database[,"Average"]
+PondB_temp_Loc3[,"Average"]
+
+
+PondB_temp_Loc3$Average <- as.numeric(as.character(TempLoc3$Average))
+PondB_temp_Loc3$date <- as.Date(TempLoc3$date, origin = "1899-12-30")
+
+
+PondB_temp_Loc3 <- PondB_temp_Loc3 %>% 
+  rename("Average" = "temp",
+         "Depth_av" = "depth")
+
+
+
+#######Loc3#######################################################################################################
+PondB_temp_Loc3 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_temp_Loc3_yearless <- PondB_temp_Loc3 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2021-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_loc3 <- loess(
+  temp ~ day_in_year + depth, 
+  data = PondB_temp_Loc3_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+temp_raster_smooth_Loc3 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2022-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    temp = predict(
+      smooth_fit_loc3, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc3-Temp-Average.tiff", width=7, height=5, units='in', res=300)
+Temp_Loc3<-ggplot(temp_raster_smooth_Loc3, aes(date, depth, fill = temp)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 15, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(5,35)
+  ) +
+  coord_cartesian(expand = F)
+Temp_Loc3
+dev.off()
+
+
+
+#######Loc1#######################################################################################################
+#######Loc1#######################################################################################################
+PondB_temp_Loc1 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_temp_Loc1_yearless <- PondB_temp_Loc1 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc1 <- loess(
+  temp ~ day_in_year + depth, 
+  data = PondB_temp_Loc1_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+temp_raster_smooth_Loc1 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    temp = predict(
+      smooth_fit_Loc1, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc1-Temp-Average.tiff", width=7, height=5, units='in', res=300)
+Temp_Loc1<-ggplot(temp_raster_smooth_Loc1, aes(date, depth, fill = temp)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 20, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(5,35)
+  ) +
+  coord_cartesian(expand = F)
+Temp_Loc1
+dev.off()
+
+
+
+
+#######Loc2#######################################################################################################
+#######Loc2#######################################################################################################
+PondB_temp_Loc2 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_temp_Loc2_yearless <- PondB_temp_Loc2 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc2 <- loess(
+  temp ~ day_in_year + depth, 
+  data = PondB_temp_Loc2_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+temp_raster_smooth_Loc2 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    temp = predict(
+      smooth_fit_Loc2, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc2-Temp-Average.tiff", width=7, height=5, units='in', res=300)
+Temp_Loc2<-ggplot(temp_raster_smooth_Loc2, aes(date, depth, fill = temp)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 20, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(5,35)
+  ) +
+  coord_cartesian(expand = F)
+Temp_Loc2
+dev.off()
+
+
+
+#######Loc1#######################################################################################################
+#######Loc1#######################################################################################################
+PondB_temp_Loc1 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_temp_Loc1_yearless <- PondB_temp_Loc1 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc1 <- loess(
+  temp ~ day_in_year + depth, 
+  data = PondB_temp_Loc1_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+temp_raster_smooth_Loc1 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    temp = predict(
+      smooth_fit_Loc1, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc1-Temp-Average.tiff", width=7, height=5, units='in', res=300)
+Temp_Loc1<-ggplot(temp_raster_smooth_Loc1, aes(date, depth, fill = temp)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 20, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(5,35)
+  ) +
+  coord_cartesian(expand = F)
+Temp_Loc1
+dev.off()
+
+
+
+
+#######Loc4#######################################################################################################
+#######Loc4#######################################################################################################
+PondB_temp_Loc4 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_temp_Loc4_yearless <- PondB_temp_Loc4 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc4 <- loess(
+  temp ~ day_in_year + depth, 
+  data = PondB_temp_Loc4_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+temp_raster_smooth_Loc4 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    temp = predict(
+      smooth_fit_Loc4, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc4-Temp-Average.tiff", width=7, height=5, units='in', res=300)
+Temp_Loc4<-ggplot(temp_raster_smooth_Loc4, aes(date, depth, fill = temp)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 20, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(5,35)
+  ) +
+  coord_cartesian(expand = F)
+Temp_Loc4
+dev.off()
+
+
+
+#######Loc5#######################################################################################################
+#######Loc5#######################################################################################################
+PondB_temp_Loc5 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_temp_Loc5_yearless <- PondB_temp_Loc5 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc5 <- loess(
+  temp ~ day_in_year + depth, 
+  data = PondB_temp_Loc5_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+temp_raster_smooth_Loc5 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    temp = predict(
+      smooth_fit_Loc5, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc5-Temp-Average.tiff", width=7, height=5, units='in', res=300)
+Temp_Loc5<-ggplot(temp_raster_smooth_Loc5, aes(date, depth, fill = temp)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 20, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(5,35)
+  ) +
+  coord_cartesian(expand = F)
+Temp_Loc5
+dev.off()
+
+
+tiff("PondB-temp-Average.tiff", width=15, height=2.5, units='in', res=300)
+
+plot_grid(Temp_Loc1,Temp_Loc2,Temp_Loc3,Temp_Loc4,Temp_Loc5,
+          align = 'h',
+          ncol=5,
+          labels = c("Loc1","Loc2","Loc3","Loc4","Loc5"), label_size = 10, label_x = .4, label_y = .975,
+          rel_widths = c(1,1,1,1,1))
+
+dev.off()
+
+
+#######################################################################################################
+#######################################################################################################
+# Heat map depth time
+#######################################################################################################
+# cond
+PondB_oxy<-read.csv("PondB_oxy.csv")
+PondB_oxy$oxy <- as.numeric(as.character(PondB_oxy$oxy))
+PondB_oxy$date <- as.Date(PondB_oxy$date)
+
+PondB_oxy_Loc1 <- PondB_oxy[ which(PondB_oxy$Location=="Loc1"), ]
+PondB_oxy_Loc2 <- PondB_oxy[ which(PondB_oxy$Location=="Loc2"), ]
+PondB_oxy_Loc3 <- PondB_oxy[ which(PondB_oxy$Location=="Loc3"), ]
+PondB_oxy_Loc4 <- PondB_oxy[ which(PondB_oxy$Location=="Loc4"), ]
+PondB_oxy_Loc5 <- PondB_oxy[ which(PondB_oxy$Location=="Loc5"), ]
+
+
+#######Loc3#######################################################################################################
+#######Loc3#######################################################################################################
+PondB_oxy_Loc3 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_oxy_Loc3_yearless <- PondB_oxy_Loc3 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_loc3 <- loess(
+  oxy ~ day_in_year + depth, 
+  data = PondB_oxy_Loc3_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+oxy_raster_smooth_Loc3 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    oxy = predict(
+      smooth_fit_loc3, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc3-oxy-Average.tiff", width=7, height=5, units='in', res=300)
+oxy_Loc3<-ggplot(oxy_raster_smooth_Loc3, aes(date, depth, fill = oxy)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 50, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-20,100)
+  ) +
+  coord_cartesian(expand = F)
+oxy_Loc3
+dev.off()
+
+
+
+#######Loc1#######################################################################################################
+#######Loc1#######################################################################################################
+PondB_oxy_Loc1 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_oxy_Loc1_yearless <- PondB_oxy_Loc1 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc1 <- loess(
+  oxy ~ day_in_year + depth, 
+  data = PondB_oxy_Loc1_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+oxy_raster_smooth_Loc1 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    oxy = predict(
+      smooth_fit_Loc1, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc1-oxy-Average.tiff", width=7, height=5, units='in', res=300)
+oxy_Loc1<-ggplot(oxy_raster_smooth_Loc1, aes(date, depth, fill = oxy)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 50, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-20,100)
+  ) +
+  coord_cartesian(expand = F)
+oxy_Loc1
+dev.off()
+
+
+
+
+#######Loc2#######################################################################################################
+#######Loc2#######################################################################################################
+PondB_oxy_Loc2 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_oxy_Loc2_yearless <- PondB_oxy_Loc2 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc2 <- loess(
+  oxy ~ day_in_year + depth, 
+  data = PondB_oxy_Loc2_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+oxy_raster_smooth_Loc2 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    oxy = predict(
+      smooth_fit_Loc2, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc2-oxy-Average.tiff", width=7, height=5, units='in', res=300)
+oxy_Loc2<-ggplot(oxy_raster_smooth_Loc2, aes(date, depth, fill = oxy)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 50, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-20,100)
+  ) +
+  coord_cartesian(expand = F)
+oxy_Loc2
+dev.off()
+
+
+
+
+#######Loc4#######################################################################################################
+#######Loc4#######################################################################################################
+PondB_oxy_Loc4 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_oxy_Loc4_yearless <- PondB_oxy_Loc4 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc4 <- loess(
+  oxy ~ day_in_year + depth, 
+  data = PondB_oxy_Loc4_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+oxy_raster_smooth_Loc4 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    oxy = predict(
+      smooth_fit_Loc4, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc4-oxy-Average.tiff", width=7, height=5, units='in', res=300)
+oxy_Loc4<-ggplot(oxy_raster_smooth_Loc4, aes(date, depth, fill = oxy)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 50, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-20,100)
+  ) +
+  coord_cartesian(expand = F)
+oxy_Loc4
+dev.off()
+
+
+
+#######Loc5#######################################################################################################
+#######Loc5#######################################################################################################
+PondB_oxy_Loc5 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_oxy_Loc5_yearless <- PondB_oxy_Loc5 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc5 <- loess(
+  oxy ~ day_in_year + depth, 
+  data = PondB_oxy_Loc5_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+oxy_raster_smooth_Loc5 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    oxy = predict(
+      smooth_fit_Loc5, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc5-oxy-Average.tiff", width=7, height=5, units='in', res=300)
+oxy_Loc5<-ggplot(oxy_raster_smooth_Loc5, aes(date, depth, fill = oxy)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 50, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-20,100)
+    
+  ) +
+  
+  coord_cartesian(expand = F)
+oxy_Loc5
+dev.off()
+
+
+tiff("PondB-oxy-Average.tiff", width=15, height=2.5, units='in', res=300)
+
+plot_grid(oxy_Loc1,oxy_Loc2,oxy_Loc3,oxy_Loc4,oxy_Loc5,
+          align = 'h',
+          ncol=5,
+          labels = c("Loc1","Loc2","Loc3","Loc4","Loc5"), label_size = 10, label_x = .4, label_y = .975,
+          rel_widths = c(1,1,1,1,1))
+dev.off()
+
+
+#######################################################################################################
+#######################################################################################################
+# Heat map depth time
+#######################################################################################################
+# cond
+PondB_cond<-read.csv("PondB_cond.csv")
+PondB_cond$cond <- as.numeric(as.character(PondB_cond$cond))
+PondB_cond$date <- as.Date(PondB_cond$date)
+
+PondB_cond_Loc1 <- PondB_cond[ which(PondB_cond$Location=="Loc1"), ]
+PondB_cond_Loc2 <- PondB_cond[ which(PondB_cond$Location=="Loc2"), ]
+PondB_cond_Loc3 <- PondB_cond[ which(PondB_cond$Location=="Loc3"), ]
+PondB_cond_Loc4 <- PondB_cond[ which(PondB_cond$Location=="Loc4"), ]
+PondB_cond_Loc5 <- PondB_cond[ which(PondB_cond$Location=="Loc5"), ]
+
+
+#######Loc3#######################################################################################################
+#######Loc3#######################################################################################################
+PondB_cond_Loc3 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_cond_Loc3_yearless <- PondB_cond_Loc3 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_loc3 <- loess(
+  cond ~ day_in_year + depth, 
+  data = PondB_cond_Loc3_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+cond_raster_smooth_Loc3 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    cond = predict(
+      smooth_fit_loc3, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc3-cond-Average.tiff", width=7, height=5, units='in', res=300)
+cond_Loc3<-ggplot(cond_raster_smooth_Loc3, aes(date, depth, fill = cond)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 50, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-20,100)
+  ) +
+  coord_cartesian(expand = F)
+cond_Loc3
+dev.off()
+
+
+
+#######Loc1#######################################################################################################
+#######Loc1#######################################################################################################
+PondB_cond_Loc1 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_cond_Loc1_yearless <- PondB_cond_Loc1 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc1 <- loess(
+  cond ~ day_in_year + depth, 
+  data = PondB_cond_Loc1_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+cond_raster_smooth_Loc1 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    cond = predict(
+      smooth_fit_Loc1, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc1-cond-Average.tiff", width=7, height=5, units='in', res=300)
+cond_Loc1<-ggplot(cond_raster_smooth_Loc1, aes(date, depth, fill = cond)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 50, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-20,100)
+  ) +
+  coord_cartesian(expand = F)
+cond_Loc1
+dev.off()
+
+
+
+
+#######Loc2#######################################################################################################
+#######Loc2#######################################################################################################
+PondB_cond_Loc2 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_cond_Loc2_yearless <- PondB_cond_Loc2 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc2 <- loess(
+  cond ~ day_in_year + depth, 
+  data = PondB_cond_Loc2_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+cond_raster_smooth_Loc2 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    cond = predict(
+      smooth_fit_Loc2, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc2-cond-Average.tiff", width=7, height=5, units='in', res=300)
+cond_Loc2<-ggplot(cond_raster_smooth_Loc2, aes(date, depth, fill = cond)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 50, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-20,100)
+  ) +
+  coord_cartesian(expand = F)
+cond_Loc2
+dev.off()
+
+
+
+
+#######Loc4#######################################################################################################
+#######Loc4#######################################################################################################
+PondB_cond_Loc4 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_cond_Loc4_yearless <- PondB_cond_Loc4 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc4 <- loess(
+  cond ~ day_in_year + depth, 
+  data = PondB_cond_Loc4_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+cond_raster_smooth_Loc4 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    cond = predict(
+      smooth_fit_Loc4, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc4-cond-Average.tiff", width=7, height=5, units='in', res=300)
+cond_Loc4<-ggplot(cond_raster_smooth_Loc4, aes(date, depth, fill = cond)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 50, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-20,100)
+  ) +
+  coord_cartesian(expand = F)
+cond_Loc4
+dev.off()
+
+
+
+#######Loc5#######################################################################################################
+#######Loc5#######################################################################################################
+PondB_cond_Loc5 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_cond_Loc5_yearless <- PondB_cond_Loc5 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc5 <- loess(
+  cond ~ day_in_year + depth, 
+  data = PondB_cond_Loc5_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+cond_raster_smooth_Loc5 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    cond = predict(
+      smooth_fit_Loc5, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc5-cond-Average.tiff", width=7, height=5, units='in', res=300)
+cond_Loc5<-ggplot(cond_raster_smooth_Loc5, aes(date, depth, fill = cond)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 50, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-20,100)
+    
+  ) +
+  
+  coord_cartesian(expand = F)
+cond_Loc5
+dev.off()
+
+
+tiff("PondB-cond-Average.tiff", width=15, height=2.5, units='in', res=300)
+
+plot_grid(cond_Loc1,cond_Loc2,cond_Loc3,cond_Loc4,cond_Loc5,
+          align = 'h',
+          ncol=5,
+          labels = c("Loc1","Loc2","Loc3","Loc4","Loc5"), label_size = 10, label_x = .4, label_y = .975,
+          rel_widths = c(1,1,1,1,1))
+dev.off()
+
+
+#######################################################################################################
+#######################################################################################################
+# Heat map depth time
+#######################################################################################################
+# tds
+PondB_tds<-read.csv("PondB_tds.csv")
+PondB_tds$tds <- as.numeric(as.character(PondB_tds$tds))
+PondB_tds$date <- as.Date(PondB_tds$date)
+
+PondB_tds_Loc1 <- PondB_tds[ which(PondB_tds$Location=="Loc1"), ]
+PondB_tds_Loc2 <- PondB_tds[ which(PondB_tds$Location=="Loc2"), ]
+PondB_tds_Loc3 <- PondB_tds[ which(PondB_tds$Location=="Loc3"), ]
+PondB_tds_Loc4 <- PondB_tds[ which(PondB_tds$Location=="Loc4"), ]
+PondB_tds_Loc5 <- PondB_tds[ which(PondB_tds$Location=="Loc5"), ]
+
+
+#######Loc3#######################################################################################################
+#######Loc3#######################################################################################################
+PondB_tds_Loc3 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_tds_Loc3_yearless <- PondB_tds_Loc3 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_loc3 <- loess(
+  tds ~ day_in_year + depth, 
+  data = PondB_tds_Loc3_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+tds_raster_smooth_Loc3 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    tds = predict(
+      smooth_fit_loc3, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc3-tds-Average.tiff", width=7, height=5, units='in', res=300)
+tds_Loc3<-ggplot(tds_raster_smooth_Loc3, aes(date, depth, fill = tds)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 0.05, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(0.0001,0.1)
+  ) +
+  coord_cartesian(expand = F)
+tds_Loc3
+dev.off()
+
+
+
+#######Loc1#######################################################################################################
+#######Loc1#######################################################################################################
+PondB_tds_Loc1 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_tds_Loc1_yearless <- PondB_tds_Loc1 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc1 <- loess(
+  tds ~ day_in_year + depth, 
+  data = PondB_tds_Loc1_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+tds_raster_smooth_Loc1 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    tds = predict(
+      smooth_fit_Loc1, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc1-tds-Average.tiff", width=7, height=5, units='in', res=300)
+tds_Loc1<-ggplot(tds_raster_smooth_Loc1, aes(date, depth, fill = tds)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 0.05, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(0.0001,0.1)
+  ) +
+  coord_cartesian(expand = F)
+tds_Loc1
+dev.off()
+
+
+
+
+#######Loc2#######################################################################################################
+#######Loc2#######################################################################################################
+PondB_tds_Loc2 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_tds_Loc2_yearless <- PondB_tds_Loc2 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc2 <- loess(
+  tds ~ day_in_year + depth, 
+  data = PondB_tds_Loc2_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+tds_raster_smooth_Loc2 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    tds = predict(
+      smooth_fit_Loc2, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc2-tds-Average.tiff", width=7, height=5, units='in', res=300)
+tds_Loc2<-ggplot(tds_raster_smooth_Loc2, aes(date, depth, fill = tds)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 0.05, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(0.0001,0.1)
+  ) +
+  coord_cartesian(expand = F)
+tds_Loc2
+dev.off()
+
+
+
+
+#######Loc4#######################################################################################################
+#######Loc4#######################################################################################################
+PondB_tds_Loc4 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_tds_Loc4_yearless <- PondB_tds_Loc4 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc4 <- loess(
+  tds ~ day_in_year + depth, 
+  data = PondB_tds_Loc4_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+tds_raster_smooth_Loc4 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    tds = predict(
+      smooth_fit_Loc4, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc4-tds-Average.tiff", width=7, height=5, units='in', res=300)
+tds_Loc4<-ggplot(tds_raster_smooth_Loc4, aes(date, depth, fill = tds)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 0.05, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(0.0001,0.1)
+  ) +
+  coord_cartesian(expand = F)
+tds_Loc4
+dev.off()
+
+
+
+#######Loc5#######################################################################################################
+#######Loc5#######################################################################################################
+PondB_tds_Loc5 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_tds_Loc5_yearless <- PondB_tds_Loc5 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc5 <- loess(
+  tds ~ day_in_year + depth, 
+  data = PondB_tds_Loc5_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+tds_raster_smooth_Loc5 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    tds = predict(
+      smooth_fit_Loc5, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc5-tds-Average.tiff", width=7, height=5, units='in', res=300)
+tds_Loc5<-ggplot(tds_raster_smooth_Loc5, aes(date, depth, fill = tds)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 0.04, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(0.0001,0.1)
+  ) +
+  coord_cartesian(expand = F)
+tds_Loc5
+dev.off()
+
+
+tiff("PondB-tds-Average.tiff", width=15, height=2.5, units='in', res=300)
+
+plot_grid(tds_Loc1,tds_Loc2,tds_Loc3,tds_Loc4,tds_Loc5,
+          align = 'h',
+          ncol=5,
+          labels = c("Loc1","Loc2","Loc3","Loc4","Loc5"), label_size = 10, label_x = .4, label_y = .975,
+          rel_widths = c(1,1,1,1,1))
+dev.off()
+
+
+
+#######################################################################################################
+#######################################################################################################
+# Heat map depth time
+#######################################################################################################
+# pH
+PondB_pH<-read.csv("PondB_pH.csv")
+PondB_pH$pH <- as.numeric(as.character(PondB_pH$pH))
+PondB_pH$date <- as.Date(PondB_pH$date)
+
+PondB_pH_Loc1 <- PondB_pH[ which(PondB_pH$Location=="Loc1"), ]
+PondB_pH_Loc2 <- PondB_pH[ which(PondB_pH$Location=="Loc2"), ]
+PondB_pH_Loc3 <- PondB_pH[ which(PondB_pH$Location=="Loc3"), ]
+PondB_pH_Loc4 <- PondB_pH[ which(PondB_pH$Location=="Loc4"), ]
+PondB_pH_Loc5 <- PondB_pH[ which(PondB_pH$Location=="Loc5"), ]
+
+
+#######Loc3#######################################################################################################
+#######Loc3#######################################################################################################
+PondB_pH_Loc3 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_pH_Loc3_yearless <- PondB_pH_Loc3 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_loc3 <- loess(
+  pH ~ day_in_year + depth, 
+  data = PondB_pH_Loc3_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+pH_raster_smooth_Loc3 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    pH = predict(
+      smooth_fit_loc3, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc3-pH-Average.tiff", width=7, height=5, units='in', res=300)
+pH_Loc3<-ggplot(pH_raster_smooth_Loc3, aes(date, depth, fill = pH)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 5.8, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(4,8)
+  ) +
+  coord_cartesian(expand = F)
+pH_Loc3
+dev.off()
+
+
+
+#######Loc1#######################################################################################################
+#######Loc1#######################################################################################################
+PondB_pH_Loc1 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_pH_Loc1_yearless <- PondB_pH_Loc1 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc1 <- loess(
+  pH ~ day_in_year + depth, 
+  data = PondB_pH_Loc1_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+pH_raster_smooth_Loc1 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    pH = predict(
+      smooth_fit_Loc1, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc1-pH-Average.tiff", width=7, height=5, units='in', res=300)
+pH_Loc1<-ggplot(pH_raster_smooth_Loc1, aes(date, depth, fill = pH)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 5.8, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(4,8)
+  ) +
+  coord_cartesian(expand = F)
+pH_Loc1
+dev.off()
+
+
+
+
+#######Loc2#######################################################################################################
+#######Loc2#######################################################################################################
+PondB_pH_Loc2 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_pH_Loc2_yearless <- PondB_pH_Loc2 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc2 <- loess(
+  pH ~ day_in_year + depth, 
+  data = PondB_pH_Loc2_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+pH_raster_smooth_Loc2 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    pH = predict(
+      smooth_fit_Loc2, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc2-pH-Average.tiff", width=7, height=5, units='in', res=300)
+pH_Loc2<-ggplot(pH_raster_smooth_Loc2, aes(date, depth, fill = pH)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 5.8, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(4,8)
+  ) +
+  coord_cartesian(expand = F)
+pH_Loc2
+dev.off()
+
+
+
+
+#######Loc4#######################################################################################################
+#######Loc4#######################################################################################################
+PondB_pH_Loc4 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_pH_Loc4_yearless <- PondB_pH_Loc4 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc4 <- loess(
+  pH ~ day_in_year + depth, 
+  data = PondB_pH_Loc4_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+pH_raster_smooth_Loc4 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    pH = predict(
+      smooth_fit_Loc4, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc4-pH-Average.tiff", width=7, height=5, units='in', res=300)
+pH_Loc4<-ggplot(pH_raster_smooth_Loc4, aes(date, depth, fill = pH)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 5.8, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(4,8)
+  ) +
+  coord_cartesian(expand = F)
+pH_Loc4
+dev.off()
+
+
+
+#######Loc5#######################################################################################################
+#######Loc5#######################################################################################################
+PondB_pH_Loc5 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_pH_Loc5_yearless <- PondB_pH_Loc5 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc5 <- loess(
+  pH ~ day_in_year + depth, 
+  data = PondB_pH_Loc5_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+pH_raster_smooth_Loc5 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    pH = predict(
+      smooth_fit_Loc5, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc5-pH-Average.tiff", width=7, height=5, units='in', res=300)
+pH_Loc5<-ggplot(pH_raster_smooth_Loc5, aes(date, depth, fill = pH)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 5.8, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(4,8)
+  ) +
+  coord_cartesian(expand = F)
+pH_Loc5
+dev.off()
+
+
+tiff("PondB-pH-Average.tiff", width=15, height=2.5, units='in', res=300)
+
+plot_grid(pH_Loc1,pH_Loc2,pH_Loc3,pH_Loc4,pH_Loc5,
+          align = 'h',
+          ncol=5,
+          labels = c("Loc1","Loc2","Loc3","Loc4","Loc5"), label_size = 10, label_x = .4, label_y = .975,
+          rel_widths = c(1,1,1,1,1))
+dev.off()
+
+
+
+#######################################################################################################
+#######################################################################################################
+# Heat map depth time
+#######################################################################################################
+# orp
+PondB_orp<-read.csv("PondB_orp.csv")
+PondB_orp$orp <- as.numeric(as.character(PondB_orp$orp))
+PondB_orp$date <- as.Date(PondB_orp$date)
+
+PondB_orp_Loc1 <- PondB_orp[ which(PondB_orp$Location=="Loc1"), ]
+PondB_orp_Loc2 <- PondB_orp[ which(PondB_orp$Location=="Loc2"), ]
+PondB_orp_Loc3 <- PondB_orp[ which(PondB_orp$Location=="Loc3"), ]
+PondB_orp_Loc4 <- PondB_orp[ which(PondB_orp$Location=="Loc4"), ]
+PondB_orp_Loc5 <- PondB_orp[ which(PondB_orp$Location=="Loc5"), ]
+
+
+#######Loc3#######################################################################################################
+#######Loc3#######################################################################################################
+PondB_orp_Loc3 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_orp_Loc3_yearless <- PondB_orp_Loc3 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_loc3 <- loess(
+  orp ~ day_in_year + depth, 
+  data = PondB_orp_Loc3_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+orp_raster_smooth_Loc3 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    orp = predict(
+      smooth_fit_loc3, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc3-orp-Average.tiff", width=7, height=5, units='in', res=300)
+orp_Loc3<-ggplot(orp_raster_smooth_Loc3, aes(date, depth, fill = orp)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 0, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-450,300)
+  ) +
+  coord_cartesian(expand = F)
+orp_Loc3
+dev.off()
+
+
+
+#######Loc1#######################################################################################################
+#######Loc1#######################################################################################################
+PondB_orp_Loc1 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_orp_Loc1_yearless <- PondB_orp_Loc1 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc1 <- loess(
+  orp ~ day_in_year + depth, 
+  data = PondB_orp_Loc1_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+orp_raster_smooth_Loc1 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    orp = predict(
+      smooth_fit_Loc1, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc1-orp-Average.tiff", width=7, height=5, units='in', res=300)
+orp_Loc1<-ggplot(orp_raster_smooth_Loc1, aes(date, depth, fill = orp)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 0, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-450,300)
+  ) +
+  coord_cartesian(expand = F)
+orp_Loc1
+dev.off()
+
+
+
+
+#######Loc2#######################################################################################################
+#######Loc2#######################################################################################################
+PondB_orp_Loc2 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_orp_Loc2_yearless <- PondB_orp_Loc2 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc2 <- loess(
+  orp ~ day_in_year + depth, 
+  data = PondB_orp_Loc2_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+orp_raster_smooth_Loc2 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    orp = predict(
+      smooth_fit_Loc2, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc2-orp-Average.tiff", width=7, height=5, units='in', res=300)
+orp_Loc2<-ggplot(orp_raster_smooth_Loc2, aes(date, depth, fill = orp)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 0, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-450,300)
+  ) +
+  coord_cartesian(expand = F)
+orp_Loc2
+dev.off()
+
+
+
+
+#######Loc4#######################################################################################################
+#######Loc4#######################################################################################################
+PondB_orp_Loc4 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_orp_Loc4_yearless <- PondB_orp_Loc4 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc4 <- loess(
+  orp ~ day_in_year + depth, 
+  data = PondB_orp_Loc4_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+orp_raster_smooth_Loc4 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    orp = predict(
+      smooth_fit_Loc4, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc4-orp-Average.tiff", width=7, height=5, units='in', res=300)
+orp_Loc4<-ggplot(orp_raster_smooth_Loc4, aes(date, depth, fill = orp)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 0, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-450,300)
+  ) +
+  coord_cartesian(expand = F)
+orp_Loc4
+dev.off()
+
+
+
+#######Loc5#######################################################################################################
+#######Loc5#######################################################################################################
+PondB_orp_Loc5 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_orp_Loc5_yearless <- PondB_orp_Loc5 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc5 <- loess(
+  orp ~ day_in_year + depth, 
+  data = PondB_orp_Loc5_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+orp_raster_smooth_Loc5 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    orp = predict(
+      smooth_fit_Loc5, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc5-orp-Average.tiff", width=7, height=5, units='in', res=300)
+orp_Loc5<-ggplot(orp_raster_smooth_Loc5, aes(date, depth, fill = orp)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 0, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(-450,300)
+  ) +
+  coord_cartesian(expand = F)
+orp_Loc5
+dev.off()
+
+
+tiff("PondB-orp-Average.tiff", width=15, height=2.5, units='in', res=300)
+
+plot_grid(orp_Loc1,orp_Loc2,orp_Loc3,orp_Loc4,orp_Loc5,
+          align = 'h',
+          ncol=5,
+          labels = c("Loc1","Loc2","Loc3","Loc4","Loc5"), label_size = 10, label_x = .4, label_y = .975,
+          rel_widths = c(1,1,1,1,1))
+dev.off()
+
+
+#######################################################################################################
+#######################################################################################################
+# Heat map depth time
+#######################################################################################################
+# Fe_dis
+PondB_Fe_dis<-read.csv("PondB_Fe_dis.csv")
+PondB_Fe_dis$Fe_dis <- as.numeric(as.character(PondB_Fe_dis$Fe_dis))
+PondB_Fe_dis$date <- as.Date(PondB_Fe_dis$date)
+
+PondB_Fe_dis_Loc1 <- PondB_Fe_dis[ which(PondB_Fe_dis$Location=="Loc1"), ]
+PondB_Fe_dis_Loc2 <- PondB_Fe_dis[ which(PondB_Fe_dis$Location=="Loc2"), ]
+PondB_Fe_dis_Loc3 <- PondB_Fe_dis[ which(PondB_Fe_dis$Location=="Loc3"), ]
+PondB_Fe_dis_Loc4 <- PondB_Fe_dis[ which(PondB_Fe_dis$Location=="Loc4"), ]
+PondB_Fe_dis_Loc5 <- PondB_Fe_dis[ which(PondB_Fe_dis$Location=="Loc5"), ]
+
+
+#######Loc3#######################################################################################################
+#######Loc3#######################################################################################################
+PondB_Fe_dis_Loc3 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_Fe_dis_Loc3_yearless <- PondB_Fe_dis_Loc3 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_loc3 <- loess(
+  Fe_dis ~ day_in_year + depth, 
+  data = PondB_Fe_dis_Loc3_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+Fe_dis_raster_smooth_Loc3 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    Fe_dis = predict(
+      smooth_fit_loc3, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc3-Fe_dis-Average.tiff", width=7, height=5, units='in', res=300)
+Fe_dis_Loc3<-ggplot(Fe_dis_raster_smooth_Loc3, aes(date, depth, fill = Fe_dis)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 5000, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(0,20000)
+  ) +
+  coord_cartesian(expand = F)
+Fe_dis_Loc3
+dev.off()
+
+
+
+#######Loc5#######################################################################################################
+#######Loc5#######################################################################################################
+PondB_Fe_dis_Loc5 %>% 
+  summarise(min(date), max(date), n_distinct(date))
+
+PondB_Fe_dis_Loc5_yearless <- PondB_Fe_dis_Loc5 %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    date_label = ymd("2019-06-15") + day_in_year
+  )
+
+# 
+smooth_fit_Loc5 <- loess(
+  Fe_dis ~ day_in_year + depth, 
+  data = PondB_Fe_dis_Loc5_yearless, 
+  span = .3
+)
+
+####### Average of 3 years ##############################################
+Fe_dis_raster_smooth_Loc5 <- crossing(
+  tibble(date = seq(ymd("2021-01-01"), ymd("2021-12-31"), by = 1)),
+  tibble(depth = seq(1, 11, length.out = 100))
+) %>%
+  mutate(
+    day_in_year = as.numeric(date - floor_date(date, unit = "years"), unit = "days"),
+    Fe_dis = predict(
+      smooth_fit_Loc5, 
+      newdata = tibble(day_in_year = day_in_year, depth = depth)
+    )
+  )
+
+tiff("Loc5-Fe_dis-Average.tiff", width=7, height=5, units='in', res=300)
+Fe_dis_Loc5<-ggplot(Fe_dis_raster_smooth_Loc5, aes(date, depth, fill = Fe_dis)) +
+  geom_raster() +
+  scale_y_reverse() +
+  scale_fill_gradient2(
+    midpoint = 5000, 
+    high = scales::muted("red"), 
+    low = scales::muted("blue"), limits=c(0,20000)
+  ) +
+  coord_cartesian(expand = F)
+Fe_dis_Loc5
+dev.off()
+
+
+
+

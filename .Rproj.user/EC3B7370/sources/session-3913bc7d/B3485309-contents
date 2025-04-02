@@ -1,0 +1,3 @@
+library(rmarkdown)
+rmarkdown::render("C:/Users/fanny/OneDrive - Clemson University/NEUP/Database/Shiny-app/L-VIZ/VIZ-APP/VIZ-APP/app.Rmd", output_format = "html_document")
+file.rename("C:/Users/fanny/OneDrive - Clemson University/NEUP/Database/Shiny-app/L-VIZ/VIZ-APP/VIZ-APP/app.html", "C:/Users/fanny/OneDrive - Clemson University/NEUP/Database/Shiny-app/L-VIZ/VIZ-APP/VIZ-APP/index.html")

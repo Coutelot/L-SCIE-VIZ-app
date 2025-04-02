@@ -1,0 +1,395 @@
+rm(list = ls())
+mypath = "C:/Users/fanny/OneDrive - Clemson University/NEUP/Database"
+setwd(mypath)
+#install.packages("fuzzyjoin")
+#install.packages("sqldf")
+library("fuzzyjoin")
+library(plyr)
+library(dplyr)
+library(tidyverse)
+library(tidypaleo)
+library(gridExtra)
+library(grid)
+library(ggplot2)
+library(lattice)
+library(moonBook)
+require(ggiraph)
+require(ggiraphExtra)
+require(plyr)
+library(viridisLite)
+library(viridis)
+theme_set(theme_bw(8))
+
+#newdf<- read.csv("All-Dataset.csv")
+# Load the dataset
+sc_dataset <- read.csv("merged_lscie_jaea.csv")
+
+# Add a new column 'Kd' which is Sorbate_val divided by Aq_val
+sc_dataset$Kd <- (sc_dataset$Sorbed_val / (sc_dataset$Aq_val * sc_dataset$Mineral_val))*1000
+                                          
+# Save the updated dataset to a new file
+write.csv(sc_dataset, "sc.dataset_with_kd.csv", row.names = FALSE)
+
+# Display the head of the updated dataset
+print(head(sc_dataset))
+
+
+###################################################################
+#Create mineral class column
+# First, create the mapping vector
+mineral_class_mapping <- c(
+  "Al(OH)3" = "AlO", 
+  "albite" = "Feldspar", 
+  "alumina" = "AlO", 
+  "amorphous silica" = "Silicates",
+  "anatase" = "TiO", 
+  "anatase/rutile" = "TiO",
+  "aragonite" = "CaC", 
+  "bentonite" = "Clays", 
+  "biotite" = "Silicates",
+  "birnessite" = "MnO", 
+  "boehmite" = "AlO", 
+  "calcite" = "CaC", 
+  "chlorite" = "Chlorites",
+  "clinoptilolite" = "Zeolites", 
+  "corundum" = "AlO", 
+  "ferrihydrite" = "FeO", 
+  "ferrous oxide" = "FeO",
+  "fluoroapatite" = "Phosphates", 
+  "gama-MnO2" = "MnO", 
+  "gibbsite" = "AlO", 
+  "goethite" = "FeO",
+  "hematite" = "FeO", 
+  "heulandite" = "Zeolites", 
+  "hydrous aluminum oxide" = "AlO",
+  "hydrous manganese oxide" = "MnO", 
+  "hydroxyapatite" = "Phosphates", 
+  "illite" = "Clays",
+  "kaolinite" = "Clays", 
+  "lepidocrosite" = "FeO", 
+  "maghemite" = "FeO", 
+  "magnetite" = "FeO",
+  "montmorillonite" = "Clays", 
+  "muscovite" = "Phyllosilicates/Mica", 
+  "Na-bentonite" = "Clays",
+  "quartz" = "Silicates", 
+  "rutile" = "TiO", 
+  "shale" = "Clays", 
+  "smectite(kaolinite)" = "Clays",
+  "vernadite" = "Oxides", 
+  "zirconia" = "ZrO"
+)
+
+# Add the Mineral_Class column using the vector
+sc_dataset$Mineral_Class <- mineral_class_mapping[sc_dataset$Mineral]
+
+# Save the updated dataset
+write.csv(sc_dataset, "sc.dataset_with_mineral_class.csv", row.names = FALSE)
+
+
+################################################################################
+##################################################################################
+#add column radius
+
+# Create a mapping of elements to their atomic radii (in picometers)
+atomic_radius <- c(
+  "H" = 53,    # H(+1)
+  "Li" = 167,  # Li(+1)
+  "Na" = 190,  # Na(+1)
+  "K" = 243,   # K(+1)
+  "Rb" = 265,  # Rb(+)
+  "Cs" = 298,  # Cs(+1)
+  "Be" = 112,  # Be(+2)
+  "Mg" = 145,  # Mg(+2)
+  "Ca" = 194,  # Ca(+2)
+  "Sr" = 219,  # Sr(+2)
+  "Ba" = 253,  # Ba(+2)
+  "Ra" = 283,  # Ra(+2)
+  "Sc" = 184,  # Sc(+3)
+  "Y" = 212,   # Y(+3)
+  "La" = 187,  # La(+3)
+  "Ti" = 176,  # Ti(+4)
+  "Zr" = 206,  # Zr(+4)
+  "Hf" = 208,  # Hf(+4)
+  "V" = 171,   # V(+5)
+  "Nb" = 198,  # Nb(+5)
+  "Ta" = 200,  # Ta(+5)
+  "Cr" = 166,  # Cr(+3,+6)
+  "Mo" = 190,  # Mo(+6)
+  "W" = 193,   # W(+6)
+  "Mn" = 161,  # Mn(+2)
+  "Tc" = 183,  # Tc(+7)
+  "Re" = 188,  # Re(+7)
+  "Fe" = 156,  # Fe(+2)
+  "Ru" = 178,  # Ru(+3)
+  "Os" = 185,  # Os(+4)
+  "Co" = 152,  # Co(+2)
+  "Rh" = 173,  # Rh(+3)
+  "Ir" = 180,  # Ir(+3)
+  "Ni" = 149,  # Ni(+2)
+  "Pd" = 169,  # Pd(+2)
+  "Pt" = 177,  # Pt(+2)
+  "Cu" = 145,  # Cu(+2)
+  "Ag" = 165,  # Ag(+1)
+  "Au" = 174,  # Au(+1)
+  "Zn" = 142,  # Zn(+2)
+  "Cd" = 161,  # Cd(+2)
+  "Hg" = 171,  # Hg(+2)
+  "B" = 87,    # B(+3)
+  "Al" = 118,  # Al(+3)
+  "Ga" = 136,  # Ga(+3)
+  "In" = 156,  # In(+3)
+  "Tl" = 156,  # Tl(+1)
+  "C" = 67,    # C(+4)
+  "Si" = 111,  # Si(+4)
+  "Ge" = 125,  # Ge(+4)
+  "Sn" = 145,  # Sn(+4)
+  "Pb" = 154,  # Pb(+2)
+  "N" = 56,    # N(+5)
+  "P" = 98,    # P(+5)
+  "As" = 114,  # As(+5)
+  "Sb" = 133,  # Sb(+5)
+  "Bi" = 143,  # Bi(+3)
+  "O" = 48,    # O(-2)
+  "S" = 88,    # S(+6)
+  "Se" = 103,  # Se(+4,+6)
+  "Te" = 123,  # Te(+4)
+  "Po" = 135,  # Po(+4)
+  "F" = 42,    # F(-1)
+  "Cl" = 79,   # Cl(-1)
+  "Br" = 94,   # Br(-1)
+  "I" = 115,   # I(-1)
+  "At" = 127,  # At(-1)
+  "He" = 31,   # He
+  "Ne" = 38,   # Ne
+  "Ar" = 71,   # Ar
+  "Kr" = 88,   # Kr
+  "Xe" = 108,  # Xe
+  "Rn" = 120,  # Rn
+  "Th" = 179,  # Th(+4)
+  "Pa" = 163,  # Pa(+5)
+  "U" = 156,   # U(+6)
+  "Np" = 155,  # Np(+4,+5)
+  "Pu" = 159,  # Pu(+4,+5)
+  "Am" = 173,  # Am(+3)
+  "Cm" = 174,  # Cm(+3)
+  "Eu" = 185,  # Eu(+3)
+  "Sm" = 185,  # Sm(+3)
+  "Yb" = 174   # Yb(+3)
+)
+
+# Function to extract element from sorbate notation
+extract_element <- function(sorbate) {
+  if (is.na(sorbate) || sorbate == "") return(NA)
+  
+  # Handle special cases first
+  if (sorbate %in% c("Aminotriazole", "Anthracene", "COM", "Fulvic_acid", 
+                     "Humic_acid", "Ketogluconate", "Mellitic_acid", 
+                     "Oxalate", "Phthalic_acid", "Trimesic_acid", "Dodecylamine")) {
+    return(NA)
+  }
+  
+  # Extract element symbol from the sorbate string
+  element <- gsub("\\(.*\\)", "", sorbate)  # Remove everything in parentheses
+  return(element)
+}
+
+# Add Radius column
+sc_dataset$Element <- sapply(sc_dataset$Sorbate, extract_element)
+sc_dataset$Radius <- sapply(sc_dataset$Element, function(x) atomic_radius[x])
+
+# Display summary of the new columns
+print("Sample of the dataset with new columns:")
+print(head(sc_dataset[, c("Sorbate", "Element", "Radius")]))
+
+print("\
+Summary of Radius values:")
+print(summary(sc_dataset$Radius))
+
+# Save the updated dataset
+write.csv(sc_dataset, "sc.dataset_with_radius.csv", row.names = FALSE)
+
+###########################################################################
+##########################################################################
+# create ionic potential column
+
+# Function to extract charge from sorbate notation
+extract_charge <- function(sorbate) {
+  if (is.na(sorbate) || sorbate == "") return(NA)
+  
+  # Handle special cases (organic compounds) that don't have charges
+  if (sorbate %in% c("Aminotriazole", "Anthracene", "COM", "Fulvic_acid", 
+                     "Humic_acid", "Ketogluconate", "Mellitic_acid", 
+                     "Oxalate", "Phthalic_acid", "Trimesic_acid", "Dodecylamine")) {
+    return(NA)
+  }
+  
+  # Extract charge from parentheses
+  charge_match <- regexpr("\\((\\+|\\-)?\\d+\\)", sorbate)
+  if (charge_match != -1) {
+    charge_str <- substr(sorbate, charge_match + 1, 
+                         charge_match + attr(charge_match, "match.length") - 2)
+    # Convert the string to numeric, handling the plus sign
+    charge <- as.numeric(gsub("\\+", "", charge_str))
+    return(charge)
+  }
+  return(NA)
+}
+
+# Add Charge column and calculate Ionic Potential
+sc_dataset$Charge <- sapply(sc_dataset$Sorbate, extract_charge)
+
+# Calculate Ionic Potential (converting radius from pm to Angstroms for conventional units)
+sc_dataset$Ionic_Potential <- sc_dataset$Charge / (sc_dataset$Radius / 100)
+
+# Display sample of the dataset with new columns
+print("Sample of the dataset with new columns:")
+print(head(sc_dataset[, c("Sorbate", "Element", "Radius", "Charge", "Ionic_Potential")]))
+
+print("\
+Summary of Charge values:")
+print(summary(sc_dataset$Charge))
+
+print("\
+Summary of Ionic Potential values:")
+print(summary(sc_dataset$Ionic_Potential))
+
+# Save the updated dataset
+write.csv(sc_dataset, "sc.dataset_with_ionic_potential.csv", row.names = FALSE)
+
+
+
+###################################
+
+# Add a new column 'percent_sorbed' to the dataset 
+sc_dataset <- sc_dataset %>%
+  mutate(percent_sorbed = ifelse(!is.na(Sorbate_val) & Sorbate_val != 0,
+                                 ((Sorbate_val - Aq_val) / Sorbate_val) * 100,
+                                 NA))
+
+# Display the first few rows to confirm the addition
+print("First few rows of the dataset with the new column 'percent_sorbed':")
+print(head(sc_dataset))
+
+write.csv(sc_dataset, "sc.dataset_added-column.csv", row.names = FALSE)
+
+
+################################################################################################
+##################################################################################################
+table(sc_dataset$Sorbate)
+# Define the subset of elements to keep
+selected_elements <- c("I(-1)", "Tc(+4)", "Tc(+7) ", "Tc(n.r.)", "Sr(+2)", "Se(-2)", "Se(+4)","Se(+6)",
+                       "Se(n.r.)", "Cl(-1)", "C(+4)", "C(n.r.)", "H(+1)", "Th(+4)", "Np(+4)", "Np(+4,5)",
+                       "Np(+5)", "Np(+5,4)", "Np(+6)", "Np(n.r.)", "U(+4)","U(+6)", "U(n.r.)",  "Pu",
+                       "Pu(+3)", "Pu(+4)", "Pu(+5)", "Pu(+6)", "Pu(III/IV)", "Pu(III/IV/V/VI)", 
+                       "Pu(n.r.)")
+
+# Subset the dataframe
+Haruko_dataset <- subset(sc_dataset, 
+                        pH >= 6 & pH <= 8 & 
+                          Electrolyte1_val >= 0.0001 & Electrolyte1_val <= 0.1 & 
+                          Sorbate %in% selected_elements)
+
+### add Kd column in L/g
+# Add a new column 'Kd' which is Sorbate_val divided by Aq_val
+Haruko_dataset$Kd_L.g <- (Haruko_dataset$Sorbed_val / (Haruko_dataset$Aq_val * Haruko_dataset$Mineral_val))
+
+# Save the updated dataset to a new file
+write.csv(Haruko_dataset, "Haruko_dataset.csv", row.names = FALSE)
+
+# Create a new column with grouped elements
+# Example of creating 'Grouped_Element' correctly with specific mapping
+element_groups <- c("I(-1)" = "I", "Tc(+4)" = "Tc", "Tc(+7)" = "Tc", "Tc(n.r.)" = "Tc",
+                    "Sr(+2)" = "Sr", "Se(-2)" = "Se", "Se(+4)" = "Se", "Se(+6)" = "Se", "Se(n.r.)" = "Se",
+                    "Cl(-1)" = "Cl", "C(+4)" = "C", "C(n.r.)" = "C", "H(+1)" = "H",
+                    "Th(+4)" = "Th", "Np(+4)" = "Np", "Np(+4,5)" = "Np", "Np(+5)" = "Np",
+                    "Np(+5,4)" = "Np", "Np(+6)" = "Np", "Np(n.r.)" = "Np",
+                    "U(+4)" = "U", "U(+6)" = "U", "U(n.r.)" = "U",
+                    "Pu" = "Pu", "Pu(+3)" = "Pu", "Pu(+4)" = "Pu", "Pu(+5)" = "Pu", "Pu(+6)" = "Pu",
+                    "Pu(III/IV)" = "Pu", "Pu(III/IV/V/VI)" = "Pu", "Pu(n.r.)" = "Pu")
+
+# Create 'Grouped_Element' based on element_groups mapping
+Haruko_dataset$Grouped_Element <- element_groups[Haruko_dataset$Element]
+library(dplyr)
+
+
+Haruko_dataset <- Haruko_dataset %>%
+  mutate(
+    Element = as.character(trimws(Element)),  # Ensure text format
+    Kd = ifelse(is.infinite(Kd), NA, Kd),  # Replace Inf with NA
+    Kd_L.g = ifelse(is.infinite(Kd_L.g), NA, Kd_L.g)
+  )
+
+detach("package:plyr", unload=TRUE)
+# Create summary table grouped by broad element categories
+summary_table <- Haruko_dataset %>%
+  group_by(Element) %>%
+  summarise(
+    Mean_Kd = mean(Kd, na.rm = TRUE),
+    Median_Kd = median(Kd, na.rm = TRUE),
+    Min_Kd = min(Kd, na.rm = TRUE),
+    Max_Kd = max(Kd, na.rm = TRUE),
+    SD_Kd = sd(Kd, na.rm = TRUE),
+    Mean_Kd_L_g = mean(Kd_L.g, na.rm = TRUE),
+    Median_Kd_L_g = median(Kd_L.g, na.rm = TRUE),
+    Min_Kd_L_g = min(Kd_L.g, na.rm = TRUE),
+    Max_Kd_L_g = max(Kd_L.g, na.rm = TRUE),
+    SD_Kd_L_g = sd(Kd_L.g, na.rm = TRUE),
+    Count = n()  # Count the number of rows per element
+  ) %>%
+  arrange(desc(Count))  # Optional: Arrange by Count in descending order
+
+print(summary_table)
+
+write.csv(summary_table, "summary_table.csv", row.names = FALSE)
+
+
+
+
+df <- read.csv('Haruko_dataset.csv'); print(head(df))
+valid_df <- df %>% 
+  filter(!is.na(Kd) & !is.na(Kd_L.g) & Kd != Inf & Kd_L.g != Inf) %>% 
+  group_by(Element, Mineral_Class) %>% 
+  summarise(
+    mean_Kd = mean(Kd, na.rm = TRUE),
+    median_Kd = median(Kd, na.rm = TRUE),
+    min_Kd = min(Kd, na.rm = TRUE),
+    max_Kd = max(Kd, na.rm = TRUE),
+    sd_Kd = sd(Kd, na.rm = TRUE),
+    mean_Kd_Lg = mean(Kd_L.g, na.rm = TRUE),
+    median_Kd_Lg = median(Kd_L.g, na.rm = TRUE),
+    min_Kd_Lg = min(Kd_L.g, na.rm = TRUE),
+    max_Kd_Lg = max(Kd_L.g, na.rm = TRUE),
+    sd_Kd_Lg = sd(Kd_L.g, na.rm = TRUE)
+  )
+
+print(valid_df)
+write.csv(valid_df, "summary_df.csv", row.names = FALSE)
+
+
+
+####################ta bel of datanumber
+sorbate_summary <-
+  dplyr::filter(sc_dataset, !is.na(Sorbate) & Sorbate != '') %>%
+    group_by(Sorbate) %>%
+    summarise(Count = n()) %>%
+    arrange(desc(Count))
+
+write.csv(sorbate_summary, "sorbate_summary.csv", row.names = FALSE)
+############################################################################################################
+############################### Dauren subsets #############################################################
+##################################################################################################
+table(sc_dataset$Sorbate)
+# Define the subset of elements to keep
+Dauren_I <- c("I(-1)")
+Dauren_Se <- c( "Se(+6)","Se(n.r.)")
+
+# Subset the dataframe
+Dauren_I_dataset <- subset(sc_dataset, 
+                           Sorbate %in% Dauren_I)
+write.csv(Dauren_I_dataset, "Dauren_I_dataset.csv", row.names = FALSE)
+
+Dauren_Se_dataset <- subset(sc_dataset, 
+                           Sorbate %in% Dauren_Se)
+write.csv(Dauren_Se_dataset, "Dauren_Se_dataset.csv", row.names = FALSE)
+

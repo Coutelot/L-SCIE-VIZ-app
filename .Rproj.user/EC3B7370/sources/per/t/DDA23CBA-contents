@@ -1,0 +1,289 @@
+# Load required packages
+if (!require("shiny")) install.packages("shiny", repos = "https://cran.rstudio.com/")
+if (!require("shinydashboard")) install.packages("shinydashboard", repos = "https://cran.rstudio.com/")
+if (!require("DT")) install.packages("DT", repos = "https://cran.rstudio.com/")
+if (!require("ggplot2")) install.packages("ggplot2", repos = "https://cran.rstudio.com/")
+if (!require("plotly")) install.packages("plotly", repos = "https://cran.rstudio.com/")
+if (!require("dplyr")) install.packages("dplyr", repos = "https://cran.rstudio.com/")
+if (!require("reshape2")) install.packages("reshape2", repos = "https://cran.rstudio.com/")
+if (!require("factoextra")) install.packages("factoextra", repos = "https://cran.rstudio.com/")
+if (!require("viridis")) install.packages("viridis", repos = "https://cran.rstudio.com/")
+if (!require("shinythemes")) install.packages("shinythemes")
+# Load libraries
+library(shiny)
+library(shinydashboard)
+library(DT)
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(reshape2)
+library(factoextra)
+library(viridis)
+library(shinythemes)
+######################################## DATA #################################################
+data <- read.csv("C:/Users/fanny/OneDrive - Clemson University/NEUP/Database/Shiny-app/L-VIZ/VIZ-APP/VIZ-APP/sc.dataset_added-column.csv")
+######################################## UI #################################################
+ui <-  div(
+  tags$style(HTML("
+        @media (min-width: 768px) {
+            body > div .container-fluid {
+                width: 750px;
+            }
+        }
+        @media (min-width: 992px) {
+            body > div > .container-fluid {
+                width: 970px;
+            }
+        }
+        @media (min-width: 1200px) {
+            body > div .container-fluid {
+                width: 1170px;
+            }
+        }
+        body > div > .container-fluid:nth-of-type(1) {
+            margin: 0 auto;
+            padding-top: 55px;
+        }
+        body > div > nav .nav.navbar-nav {
+            float: right;
+        }
+        ")),
+  navbarPage(
+    position = "fixed-top",
+    theme = shinythemes::shinytheme("flatly"),
+    windowTitle = "GMAP",
+    fluid = TRUE,
+    title = "L-SCIE Database Visualization   maintained by Fanny Coutelot",
+    selected = "Overview",
+   tabPanel("Overview",
+      # Overview tab #######################################################################################################################################
+      ######################################################################################################################################################
+      tabsetPanel(  id = NULL,
+                    selected = "Dataset Description" ,
+                    type = "pills",
+                   # header = TRUE,
+                  #  footer = NULL,
+         tabPanel(title = "Dataset Description",
+                  p("This dataset provides a comprehensive analysis of various minerals and their interactions with different sorbates across varying pH levels."),
+                  p("Key variables:"),
+                  tags$ul(
+                    tags$li("Mineral: Type of mineral"),
+                    tags$li("Sorbate: Elements"),
+                    tags$li("pH: pH values"),
+                    tags$li("Kd: Distribution coefficient (mg/kg)"),
+                    tags$li("Ionic_Potential: Ionic potential values")
+                  )
+                ),
+              
+        tabPanel(title = "Database Overview" ,
+                column(4, selectInput("Mineral", "Mineral:", c("All", unique(as.character(data$Mineral))))
+                ),
+                column(4,selectInput("Sorbate", "Sorbate:", c("All", unique(as.character(data$Sorbate))))
+                ),
+                column(4,selectInput("Reference", "Reference:", c("All", unique(as.character(data$Reference))))
+                ),
+              fluidRow( DT::dataTableOutput("table")
+              ) ) )),
+   # Boxplot & Heatmap tab #######################################################################################################################################
+   ######################################################################################################################################################
+   tabPanel("Summary",
+    tabsetPanel( id = NULL,
+                selected = "Bar Plots" ,
+                type = "pills",
+                # header = TRUE,
+                #  footer = NULL,
+     tabPanel('Bar Plots',
+              h3('Bar Plot: Mineral_Class'),
+              plotOutput('barMineral'),
+              h3('Bar Plot: Sorbate'),
+              plotOutput('barSorbate')
+     ),
+     tabPanel('Pie Charts',
+              h3('Pie Chart: Mineral_Class Distribution'),
+              plotlyOutput('pieMineral'),
+              h3('Pie Chart: Sorbate Distribution'),
+              plotlyOutput('pieSorbate')
+     ),
+     tabPanel('Summary Table',
+              h3('Summary'),
+              tableOutput('summaryTable')
+     )
+   )),
+      # View Data tab #######################################################################################################################################
+      ######################################################################################################################################################
+      tabPanel("View Data",
+              fluidRow(
+                column(2,
+                       selectInput("mineral", "Select Mineral class:", 
+                                   choices = c("All", sort(unique(data$Mineral_Class))), 
+                                   selected = "All",
+                                   multiple = FALSE)),  
+                column(2,
+                       selectInput("sorbate", "Select Sorbate:", 
+                                   choices = c("All", sort(unique(data$Sorbate))), 
+                                   selected = "All",
+                                   multiple = FALSE))
+                
+              ),
+              
+              fluidRow(     
+                column(6,  plotOutput("scatterPlot_aq", height = "400px")),
+              column(6,  plotOutput("scatterPlot_percent", height = "400px"))
+      )),
+    
+      # Kd Analysis tab #######################################################################################################################################
+      ######################################################################################################################################################
+     # tabPanel("kd",
+    #          fluidRow(
+    #            box(
+    #              width = 12,
+     #             plotlyOutput("kd_plot")
+      #          )
+       #       )
+      #),
+      # Kd mineral #######################################################################################################
+      ######################################################################################################################  
+      tabPanel( "Kd-Distrib",
+              fluidRow(
+                box(
+                  title = "Controls",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  width = 3,
+                  uiOutput("mineral_class_input"),
+                  downloadButton("download_plot", "Download Plot")
+                ),
+                box(
+                  title = "Mineral Class Analysis",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  width = 9,
+                  plotOutput("box_bar_plot", height = "600px")
+                )
+              ),
+              fluidRow(
+                box(
+                  title = "Dataset Summary",
+                  status = "info",
+                  solidHeader = TRUE,
+                  width = 12,
+                  verbatimTextOutput("data_summary")
+                )
+              ),
+              fluidRow(
+                box(
+                  title = "Mineral Class Statistics",
+                  status = "info",
+                  solidHeader = TRUE,
+                  width = 12,
+                  tableOutput("mineral_stats")
+                )
+              )
+              
+      ),
+      
+      # Kd explorer #######################################################################################################
+      ######################################################################################################################
+      tabPanel("Kd-explorer",
+              fluidRow(
+                box(
+                  title = "Controls",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  width = 3,
+                  selectInput("mineral_class_select",
+                              "Select Mineral Classes:",
+                              choices = NULL,
+                              multiple = TRUE),
+                  selectizeInput("mineral_select", 
+                                 "Select Minerals:",
+                                 choices = NULL,
+                                 multiple = TRUE,
+                                 options = list(placeholder = 'Select minerals')),
+                  selectizeInput("sorbate_select", 
+                                 "Select Sorbate:",
+                                 choices = NULL,
+                                 multiple = TRUE,
+                                 options = list(placeholder = 'Select sorbate')),
+                  sliderInput("kd_range",
+                              "Log10(Kd) Range:",
+                              min = -10,
+                              max = 10,
+                              value = c(-10, 10)),
+                  checkboxInput("show_outliers", "Show Outliers", TRUE),
+                  downloadButton("download_plot", "Download Plot")
+                ),
+                box(
+                  title = "Kd Distribution Analysis",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  width = 9,
+                  plotOutput("boxplot", height = "800px")
+                )
+              ),
+              fluidRow(
+                box(
+                  title = "Data Summary",
+                  status = "info",
+                  solidHeader = TRUE,
+                  width = 12,
+                  verbatimTextOutput("data_summary")
+                )
+              )
+      ),
+      
+      # PCA tab ##############################################################################################################################################
+      ########################################################################################################################################################
+      tabPanel("pca",
+              fluidRow(
+                box(
+                  title = "Controls",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  width = 3,
+                  selectizeInput("sorbate_select", 
+                                 "Select Sorbate:",
+                                 choices = NULL,
+                                 multiple = TRUE,
+                                 options = list(placeholder = 'Select Sorbate')),
+                  numericInput("n_components", 
+                               "Number of PCs to display:",
+                               min = 2, max = 10, value = 2),
+                  checkboxInput("scale_data", "Scale data", value = TRUE),
+                  downloadButton("download_plot", "Download Plot")
+                ),
+                box(
+                  title = "PCA Plot",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  width = 9,
+                  plotOutput("pca_plot", height = "600px")
+                )
+              ),
+              fluidRow(
+                box(
+                  title = "Variance Explained",
+                  status = "info",
+                  solidHeader = TRUE,
+                  width = 6,
+                  plotOutput("scree_plot", height = "400px")
+                ),
+                box(
+                  title = "Variable Contributions",
+                  status = "info",
+                  solidHeader = TRUE,
+                  width = 6,
+                  plotOutput("var_contrib_plot", height = "400px")
+                )
+              ),
+              fluidRow(
+                box(
+                  title = "PCA Summary",
+                  status = "info",
+                  solidHeader = TRUE,
+                  width = 12,
+                  verbatimTextOutput("pca_summary")
+                )
+              )
+      )
+    ))

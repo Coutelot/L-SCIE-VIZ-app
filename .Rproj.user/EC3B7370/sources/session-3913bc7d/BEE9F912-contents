@@ -1,0 +1,234 @@
+rm(list = ls())
+mypath = "C:/Users/fanny/OneDrive - Clemson University/Document/Hunnicutt"
+setwd(mypath)
+#install.packages("fuzzyjoin")
+#install.packages("sqldf")
+library("fuzzyjoin")
+library(plyr)
+library(dplyr)
+library(tidyverse)
+library(tidypaleo)
+library(gridExtra)
+library(grid)
+library(ggplot2)
+library(lattice)
+library(moonBook)
+require(ggiraph)
+require(ggiraphExtra)
+require(plyr)
+library(viridisLite)
+library(viridis)
+theme_set(theme_bw(8))
+
+
+df <- read.csv("Hunnicutt_dataset.csv")
+
+######## Data treatment ###################################################################################
+
+# If 'Sample.Location.ID' starts with 'SW', take the last letter; otherwise, keep the previous logic
+df$Location <- ifelse(grepl('^A', df$Sample.Location.ID), 'A', 
+                      ifelse(grepl('^B', df$Sample.Location.ID), 'B', 
+                             ifelse(grepl('^C', df$Sample.Location.ID), 'C', 
+                                    ifelse(grepl('^SW', df$Sample.Location.ID), substr(df$Sample.Location.ID, nchar(df$Sample.Location.ID), nchar(df$Sample.Location.ID)), NA))))
+
+# Display the head of the modified dataframe
+print(head(df))
+
+# format date 
+df$Sample.Date <- as.Date(df$Sample.Date, format='%m/%d/%Y')
+
+##########################################################################################################
+#########################################################################################################
+############################################TEST FIGURES 
+
+
+# Filtering relevant columns
+plot_data <- df[, c('Sample.Location.ID', 'Sample.Date', 'Depth..inches.', 'pH', 'EH', 'Dissolved.Oxyen..mg.L.', 'Fe.259.940..129...Radial.',"Location", 'X54Fe..KED....56Fe..KED.', 'X56Fe..KED....57Fe..KED.',
+                    'X54Fe..KED....57Fe..KED.', "Dissolved.organic.carbon..DOC.", 'Total.Nitrogen..TN.', 'S.180.731..486...Radial.')]
+
+# Checking the head of the filtered data
+print(head(plot_data))
+
+library(reshape2)
+plot_data_melted <- melt(plot_data, id.vars = c('Sample.Location.ID', 'Sample.Date', 'Depth..inches.', 'Location'), 
+                         measure.vars = c('pH', 'EH', 'Dissolved.Oxyen..mg.L.', 'Fe.259.940..129...Radial.', 'X54Fe..KED....56Fe..KED.', 'X56Fe..KED....57Fe..KED.',
+                                          'X54Fe..KED....57Fe..KED.', "Dissolved.organic.carbon..DOC.", 'Total.Nitrogen..TN.', 'S.180.731..486...Radial.'))
+
+
+
+
+p <- ggplot(plot_data_melted, aes(x = Sample.Date)) + 
+  geom_point(aes(y = value, color = factor(Depth..inches.), group = Sample.Location.ID)) + 
+ # geom_point(aes(y = value, color = Location)) + 
+  facet_grid(variable ~ Location, scales = 'free_y') + 
+  labs(x = 'Sample Date', y = 'Depth (inches)', title = 'Sample Location ID vs Depth over Sample Date') + 
+ # theme_classic()+
+  theme(legend.position = 'bottom', legend.direction = "horizontal")+
+theme( axis.text = element_text( size = 10, face = "bold"),
+       axis.text.x = element_text( size = 10,angle = 90, hjust = 1 ),
+       axis.title = element_text( size = 10, face = "bold" ),
+       # The new stuff
+       strip.text = element_text(size =10)) #+
+
+print(p)
+
+
+
+# test pca
+
+library(FactoMineR)
+library(FactoInvestigate)
+data.frame(colnames(df))
+data_famd <- df[, c('Location', 'Sample.Date', 'Depth..inches.', 'pH', 'EH', 'Dissolved.Oxyen..mg.L.', 'Fe.259.940..129...Radial.',"Dissolved.organic.carbon..DOC.",
+                   'Conductivity...S.', 'Temperature', 'Dissolved.organic.carbon..DOC.', 'Total.Nitrogen..TN.', 'Mg.279.553..120...Radial.', 'K.766.490..44...Radial.',
+                   ' Fe.259.940..129...Radial.', 'P.177.495..490...Radial.', 'S.180.731..486...Radial.', 'Ca.422.673..80...Radial.',' Na.589.592..57...Radial.',
+                    'X27Al..KED.', 'X59Co..KED.', 'X60Ni..KED.', 'X63Cu..KED.', 'X66Zn..KED.', 'X75As..KED.', 'X54Fe..KED....56Fe..KED.', 'X56Fe..KED....57Fe..KED.',
+                    'X54Fe..KED....57Fe..KED.')]
+
+data(data_pca)
+res.pca = PCA(data_pca,  graph=FALSE)
+Investigate(res.pca)
+# Read in .csv file containing all chemistry data associated with CTD data
+data.frame(colnames(df))
+# select only columns needed
+#To see the structure of the data, type this
+str(Laser)
+
+fviz_pca_var(res.pca, col.var="contrib")
+png("LaserAblationL3D4_PCA.png", width=4, height=4, units='in', res=200)
+plot(res.pca, choix = "var")
+dev.off()
+
+
+#get_eigenvalue(res.famd): Extract the eigenvalues/variances retained by each dimension (axis).
+#fviz_eig(res.famd): Visualize the eigenvalues/variances.
+#get_famd_ind(res.famd): Extract the results for individuals.
+#get_famd_var(res.famd): Extract the results for quantitative and qualitative variables.
+#fviz_famd_ind(res.famd), fviz_famd_var(res.famd): Visualize the results for individuals and variables, respectively.
+
+
+get_eigenvalue(water.chem.famd)
+get_famd_var(water.chem.famd)
+
+var <- get_famd_var(water.chem.famd)
+head(var$cos2)
+
+
+
+# Plot of variables
+fviz_famd_var(water.chem.famd, repel = TRUE)
+# Contribution to the first dimension
+fviz_contrib(water.chem.famd, "var", axes = 1)
+# Contribution to the second dimension
+fviz_contrib(water.chem.famd, "var", axes = 2)
+
+
+# graph of qualitative variables
+fviz_famd_var(water.chem.famd, "quali.var", col.var = "cos2", 
+              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07")
+)
+
+fviz_famd_var(water.chem.famd, "quanti.var", col.var = "cos2",   repel = TRUE)
+fviz_famd_var(water.chem.famd, "qualy.var", col.var = "cos2",   repel = TRUE)
+
+# graph of individuals
+ind <- get_famd_ind(water.chem.famd)
+ind
+
+fviz_mfa_ind(water.chem.famd, 
+             habillage = "Label", # color by groups 
+             palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+             addEllipses = TRUE, ellipse.type = "confidence", 
+             repel = TRUE # Avoid text overlapping
+) 
+
+
+
+
+
+
+png("FAMD-quality-circle.png", width=15, height=10, units='in', res=200)
+water.chem.corr <- fviz_famd_var(water.chem.famd, "quanti.var", col.var = "cos2",   repel = TRUE) +
+  
+  
+  labs(title = "") +
+  
+  theme(axis.title = element_text(size = rel(1.0), vjust =.5),
+        
+        legend.position = "top",
+        legend.justification = "center",
+        legend.margin = margin(0,0,0,0),
+        legend.box.margin = margin(-8,-8,-8,-8),#c(.2,.92), 
+        legend.background = element_rect(linetype = "solid", colour = "white"),
+        legend.direction = "horizontal",# legend.key.size = unit(1,"line"),
+        legend.text = element_text(color="black", size = 10), legend.title = element_text(color = "black", size = 12)) +
+  
+  guides(color = guide_colourbar("Representation quality", title.position = "top", barwidth = 8)) + #+
+  
+  scale_color_gradient2(limits = c(0.0, .9), low ="#00AFBB", mid ="#E7B800", high ="#FC4E07", midpoint = .45, breaks = seq(0.2,0.9, 0.2))
+
+water.chem.corr <- water.chem.corr + theme(panel.grid.major=element_blank(),  
+                                           panel.grid.minor=element_blank(),
+                                           panel.background=element_blank(),
+                                           axis.line=element_line(colour="black"), 
+                                           axis.text.x=element_text(colour="black"), 
+                                           axis.text.y=element_text(colour="black"),
+                                           plot.subtitle=element_text(size=12, hjust=-.25, 
+                                                                      face="bold", 
+                                                                      color="black"),
+                                           panel.border = element_rect(color = "black", 
+                                                                       linewidth =  1.05, 
+                                                                       fill = NA, 
+                                                                       linetype= 'solid'),
+                                           plot.margin = unit(c(0, 1, .1, .1), "cm"))
+
+
+water.chem.corr
+dev.off()
+################################################
+#################################################
+
+
+png("FAMD-qualy-var.png", width=15, height=10, units='in', res=200)
+water.chem.var <- fviz_famd_var(water.chem.famd,"quali.var", col.var = "cos2",   repel = TRUE) +
+  
+  
+  labs(title = "") +
+  
+  theme(axis.title = element_text(size = rel(1.0), vjust =.5),
+        
+        legend.position = "top",
+        legend.justification = "center",
+        legend.margin = margin(0,0,0,0),
+        legend.box.margin = margin(-8,-8,-8,-8),#c(.2,.92), 
+        legend.background = element_rect(linetype = "solid", colour = "white"),
+        legend.direction = "horizontal",# legend.key.size = unit(1,"line"),
+        legend.text = element_text(color="black", size = 10), legend.title = element_text(color = "black", size = 12)) +
+  
+  guides(color = guide_colourbar("Representation quality", title.position = "top", barwidth = 8)) + #+
+  
+  scale_color_gradient2(limits = c(0.0, .9), low ="#00AFBB", mid ="#E7B800", high ="#FC4E07", midpoint = .45, breaks = seq(0.2,0.9, 0.2))
+
+water.chem.var <- water.chem.var + theme(panel.grid.major=element_blank(),  
+                                         panel.grid.minor=element_blank(),
+                                         panel.background=element_blank(),
+                                         axis.line=element_line(colour="black"), 
+                                         axis.text.x=element_text(colour="black"), 
+                                         axis.text.y=element_text(colour="black"),
+                                         plot.subtitle=element_text(size=12, hjust=-.25, 
+                                                                    face="bold", 
+                                                                    color="black"),
+                                         panel.border = element_rect(color = "black", 
+                                                                     linewidth =  1.05, 
+                                                                     fill = NA, 
+                                                                     linetype= 'solid'),
+                                         plot.margin = unit(c(0, 1, .1, .1), "cm"))
+
+
+water.chem.var
+dev.off()
+
+
+
+
+

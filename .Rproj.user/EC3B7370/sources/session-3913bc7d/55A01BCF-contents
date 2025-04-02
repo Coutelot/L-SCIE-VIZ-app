@@ -1,0 +1,271 @@
+#Lake analayzer
+rm(list = ls())
+setwd("C:/Users/fanny/OneDrive/Bureau/POND_B/PondB-database")
+
+library(rLakeAnalyzer)
+
+#Get the path for the package example file included
+wtr.path <- system.file('extdata', 'Sparkling.daily.wtr', package="rLakeAnalyzer")
+
+#Load data for example lake, Sparkilng Lake, Wisconsin.
+sp.wtr = load.ts(wtr.path)
+
+#Plot default figure
+wtr.heat.map(Temp)
+
+
+# Get system data file paths 
+wtr.path <- system.file('extdata', 'Sparkling.wtr', package="rLakeAnalyzer")
+bth.path <- system.file('extdata', 'Sparkling.bth', package="rLakeAnalyzer")
+
+# Load data for example lake, Sparkilng Lake, Wisconsin.
+wtr = load.ts(wtr.path)
+bth = load.bathy(bth.path)
+
+
+Temp <- load.ts("water_temp_for_lake_analyzer.txt", tz = "EST")
+Temp<- Temp[,-2]
+
+
+
+TempLoc3<- subset(Temp, location == "Loc3")
+TempLoc3<- TempLoc3[,-2]
+#temp.loc.3 <- subset(water.temp.reduced, Location == "Loc3")
+## Not run: 
+# Generate default plot
+plot<-schmidt.plot(Temp,bth)
+plot
+## End(Not run)
+
+#bthA	<-	c(1000,900,864,820,200,10)
+#bthD	<-	c(0,2.3,2.5,4.2,5.8,7)
+
+#wtr	<-	c(28,27,26.4,26,25.4,24,23.3)
+#depths	<-	c(0,1,2,3,4,5,6)
+
+#cat('Schmidt stability for input is: ')
+#cat(schmidt.stability(wtr, depths, bthA, bthD))
+
+######################################################################################################################
+
+
+
+
+water.temp <- read.csv('Database-PondB_WaterColumn_All.csv')
+water.temp$Average <- as.numeric(water.temp$Average )
+water.temp$Date.ymd.<- as.Date(water.temp$Date.ymd.)
+water.Temp3<- subset(water.temp, Location=="Loc3"&param=="Temp")
+#########May 2021 ############
+water.Temp3.may_2021<- subset(water.Temp3, Date2=="may_2021")
+Temp.vect.may_2021<- water.Temp3.may_2021[["Average"]] 
+length(Temp.vect.may_2021)
+Depth.vect.may_2021<-water.Temp3.may_2021[["Depth_av"]] 
+length(Depth.vect.may_2021)
+
+t.d. = thermo.depth(Temp.vect.may_2021, Depth.vect.may_2021, seasonal=F)
+meta.depths(Temp.vect.may_2021, Depth.vect.may_2021, slope = 0.1, seasonal = F) #, mixed.cutoff = 1)
+
+
+#########sept 2019 ############
+water.Temp3.sept_2019<- subset(water.Temp3, Date2=="sept_2019")
+Temp.vect.sept_2019<- water.Temp3.sept_2019[["Average"]] 
+length(Temp.vect.sept_2019)
+Depth.vect.sept_2019<-water.Temp3.sept_2019[["Depth_av"]] 
+length(Depth.vect.sept_2019)
+
+t.d. = thermo.depth(Temp.vect.sept_2019, Depth.vect.sept_2019, seasonal=F)
+meta.depths(Temp.vect.sept_2019, Depth.vect.sept_2019, slope = 0.1, seasonal = F) #, mixed.cutoff = 1)
+#########sept 2019 ############
+water.Temp3.june_2019<- subset(water.Temp3, Date2=="june_2019")
+Temp.vect.june_2019<- water.Temp3.june_2019[["Average"]] 
+length(Temp.vect.june_2019)
+Depth.vect.june_2019<-water.Temp3.june_2019[["Depth_av"]] 
+length(Depth.vect.june_2019)
+
+t.d. = thermo.depth(Temp.vect.june_2019, Depth.vect.june_2019, seasonal=F)
+meta.depths(Temp.vect.june_2019, Depth.vect.june_2019, slope = 0.1, seasonal = F) #, mixed.cutoff = 1)
+#########october2019 ############
+water.Temp3.oct_2019<- subset(water.Temp3, Date2=="oct_2019")
+Temp.vect.oct_2019<- water.Temp3.oct_2019[["Average"]] 
+length(Temp.vect.oct_2019)
+Depth.vect.oct_2019<-water.Temp3.oct_2019[["Depth_av"]] 
+length(Depth.vect.oct_2019)
+
+t.d. = thermo.depth(Temp.vect.oct_2019, Depth.vect.oct_2019, seasonal=F)
+t.d.
+meta.depths(Temp.vect.oct_2019, Depth.vect.oct_2019, slope = 0.1, seasonal = F) #, mixed.cutoff = 1)
+#########october2019 ############
+water.Temp3.nov_2019<- subset(water.Temp3, Date2=="nov_2019")
+Temp.vect.nov_2019<- water.Temp3.nov_2019[["Average"]] 
+length(Temp.vect.nov_2019)
+Depth.vect.nov_2019<-water.Temp3.nov_2019[["Depth_av"]] 
+length(Depth.vect.nov_2019)
+
+t.d. = thermo.depth(Temp.vect.nov_2019, Depth.vect.nov_2019, seasonal=F)
+t.d.
+meta.depths(Temp.vect.nov_2019, Depth.vect.nov_2019, slope = 0.1, seasonal = F) #, mixed.cutoff = 1)
+#########december2019 ############
+water.Temp3.dec_2019<- subset(water.Temp3, Date2=="dec_2019")
+Temp.vect.dec_2019<- water.Temp3.dec_2019[["Average"]] 
+length(Temp.vect.dec_2019)
+Depth.vect.dec_2019<-water.Temp3.dec_2019[["Depth_av"]] 
+length(Depth.vect.dec_2019)
+
+t.d. = thermo.depth(Temp.vect.dec_2019, Depth.vect.dec_2019, seasonal=F)
+t.d.
+meta.depths(Temp.vect.dec_2019, Depth.vect.dec_2019, slope = 0.1, seasonal = F) #, mixed.cutoff = 1)
+#########december2019 ############
+water.Temp3.jan_2020<- subset(water.Temp3, Date2=="jan_2020")
+Temp.vect.jan_2020<- water.Temp3.jan_2020[["Average"]] 
+length(Temp.vect.jan_2020)
+Depth.vect.jan_2020<-water.Temp3.jan_2020[["Depth_av"]] 
+length(Depth.vect.jan_2020)
+
+t.d. = thermo.depth(Temp.vect.jan_2020, Depth.vect.jan_2020, seasonal=F)
+t.d.
+meta.depths(Temp.vect.jan_2020, Depth.vect.jan_2020, slope = 0.1, seasonal = F) #, mixed.cutoff = 1)
+#########december2019 ############
+water.Temp3.feb_2021<- subset(water.Temp3, Date2=="feb_2021")
+Temp.vect.feb_2021<- water.Temp3.feb_2021[["Average"]] 
+length(Temp.vect.feb_2021)
+Depth.vect.feb_2021<-water.Temp3.feb_2021[["Depth_av"]] 
+length(Depth.vect.feb_2021)
+
+t.d. = thermo.depth(Temp.vect.feb_2021, Depth.vect.feb_2021, seasonal=F)
+t.d.
+meta.depths(Temp.vect.feb_2021, Depth.vect.feb_2021, slope = 0.1, seasonal = F) #, mixed.cutoff = 1)
+#########december2019 ############
+water.Temp3.mar_2020<- subset(water.Temp3, Date2=="mar_2020")
+Temp.vect.mar_2020<- water.Temp3.mar_2020[["Average"]] 
+length(Temp.vect.mar_2020)
+Depth.vect.mar_2020<-water.Temp3.mar_2020[["Depth_av"]] 
+length(Depth.vect.mar_2020)
+
+t.d. = thermo.depth(Temp.vect.mar_2020, Depth.vect.mar_2020, seasonal=F)
+t.d.
+meta.depths(Temp.vect.mar_2020, Depth.vect.mar_2020, slope = 0.1, seasonal = F) #, mixed.cutoff = 1)
+#########december2019 ############
+water.Temp3.jul_2020<- subset(water.Temp3, Date2=="jul_2020")
+Temp.vect.jul_2020<- water.Temp3.jul_2020[["Average"]] 
+length(Temp.vect.jul_2020)
+Depth.vect.jul_2020<-water.Temp3.jul_2020[["Depth_av"]] 
+length(Depth.vect.jul_2020)
+
+t.d. = thermo.depth(Temp.vect.jul_2020, Depth.vect.jul_2020, seasonal=F)
+t.d.
+meta.depths(Temp.vect.jul_2020, Depth.vect.jul_2020, slope = 0.1, seasonal = F) #, mixed.cutoff
+#########december2019 ############
+water.Temp3.dec_2020<- subset(water.Temp3, Date2=="dec_2020")
+Temp.vect.dec_2020<- water.Temp3.dec_2020[["Average"]] 
+length(Temp.vect.dec_2020)
+Depth.vect.dec_2020<-water.Temp3.dec_2020[["Depth_av"]] 
+length(Depth.vect.dec_2020)
+
+t.d. = thermo.depth(Temp.vect.dec_2020, Depth.vect.dec_2020, seasonal=F)
+t.d.
+meta.depths(Temp.vect.dec_2020, Depth.vect.dec_2020, slope = 0.1, seasonal = F) #, mixed.cutoff
+
+#########december2019 ############
+water.Temp3.feb_2021<- subset(water.Temp3, Date2=="feb_2021")
+Temp.vect.feb_2021<- water.Temp3.feb_2021[["Average"]] 
+length(Temp.vect.feb_2021)
+Depth.vect.feb_2021<-water.Temp3.feb_2021[["Depth_av"]] 
+length(Depth.vect.feb_2021)
+
+t.d. = thermo.depth(Temp.vect.feb_2021, Depth.vect.feb_2021, seasonal=F)
+t.d.
+meta.depths(Temp.vect.feb_2021, Depth.vect.feb_2021, slope = 0.1, seasonal = F) #, mixed.cutoff
+
+#########december2019 ############
+water.Temp3.mar_2021<- subset(water.Temp3, Date2=="mar_2021")
+Temp.vect.mar_2021<- water.Temp3.mar_2021[["Average"]] 
+length(Temp.vect.mar_2021)
+Depth.vect.mar_2021<-water.Temp3.mar_2021[["Depth_av"]] 
+length(Depth.vect.mar_2021)
+
+t.d. = thermo.depth(Temp.vect.mar_2021, Depth.vect.mar_2021, seasonal=F)
+t.d.
+meta.depths(Temp.vect.mar_2021, Depth.vect.mar_2021, slope = 0.1, seasonal = F) #, mixed.cutoff
+
+#########december2019 ############
+water.Temp3.may_2021<- subset(water.Temp3, Date2=="may_2021")
+Temp.vect.may_2021<- water.Temp3.may_2021[["Average"]] 
+length(Temp.vect.may_2021)
+Depth.vect.may_2021<-water.Temp3.may_2021[["Depth_av"]] 
+length(Depth.vect.may_2021)
+
+t.d. = thermo.depth(Temp.vect.may_2021, Depth.vect.may_2021, seasonal=F)
+t.d.
+meta.depths(Temp.vect.may_2021, Depth.vect.may_2021, slope = 0.1, seasonal = F) #, mixed.cutoff
+
+#########december2019 ############
+water.Temp3.june_2021<- subset(water.Temp3, Date2=="june_2021")
+Temp.vect.june_2021<- water.Temp3.june_2021[["Average"]] 
+length(Temp.vect.june_2021)
+Depth.vect.june_2021<-water.Temp3.june_2021[["Depth_av"]] 
+length(Depth.vect.june_2021)
+
+t.d. = thermo.depth(Temp.vect.june_2021, Depth.vect.june_2021, seasonal=F)
+t.d.
+meta.depths(Temp.vect.june_2021, Depth.vect.june_2021, slope = 0.1, seasonal = F) #, mixed.cutoff
+
+#########december2019 ############
+water.Temp3.aug_2021<- subset(water.Temp3, Date2=="aug_2021")
+Temp.vect.aug_2021<- water.Temp3.aug_2021[["Average"]] 
+length(Temp.vect.aug_2021)
+Depth.vect.aug_2021<-water.Temp3.aug_2021[["Depth_av"]] 
+length(Depth.vect.aug_2021)
+
+t.d. = thermo.depth(Temp.vect.aug_2021, Depth.vect.aug_2021, seasonal=F)
+t.d.
+meta.depths(Temp.vect.aug_2021, Depth.vect.aug_2021, slope = 0.1, seasonal = F) #, mixed.cutoff
+
+#########december2019 ############
+water.Temp3.sept_2021<- subset(water.Temp3, Date2=="sept_2021")
+Temp.vect.sept_2021<- water.Temp3.sept_2021[["Average"]] 
+length(Temp.vect.sept_2021)
+Depth.vect.sept_2021<-water.Temp3.sept_2021[["Depth_av"]] 
+length(Depth.vect.sept_2021)
+
+t.d. = thermo.depth(Temp.vect.sept_2021, Depth.vect.sept_2021, seasonal=F)
+t.d.
+meta.depths(Temp.vect.sept_2021, Depth.vect.sept_2021, slope = 0.1, seasonal = F) #, mixed.cutoff
+
+#########december2019 ############
+water.Temp3.nov_2021<- subset(water.Temp3, Date2=="nov_2021")
+Temp.vect.nov_2021<- water.Temp3.nov_2021[["Average"]] 
+length(Temp.vect.nov_2021)
+Depth.vect.nov_2021<-water.Temp3.nov_2021[["Depth_av"]] 
+length(Depth.vect.nov_2021)
+
+t.d. = thermo.depth(Temp.vect.nov_2021, Depth.vect.nov_2021, seasonal=F)
+t.d.
+meta.depths(Temp.vect.nov_2021, Depth.vect.nov_2021, slope = 0.1, seasonal = F) #, mixed.cutoff
+
+###############################################################
+thermo <- read.csv('Thermocline_calculations.csv')
+thermo$date<- as.Date(thermo$date)
+library("FactoMineR")
+# install.packages("PerformanceAnalytics")
+library("PerformanceAnalytics")
+library("factoextra")
+library(ggplot2)
+library("fuzzyjoin")
+library(plyr)
+library(dplyr)
+library(tidyverse)
+library(tidypaleo)
+library(gridExtra)
+library(grid)
+library(ggplot2)
+library(lattice)
+theme_set(theme_bw(8))
+
+
+p <- ggplot(thermo, aes(x = date, y= avegare.thermo)) + 
+  geom_point() +
+ geom_ribbon(aes(ymin = upper, ymax = lower), alpha = 0.1) +
+scale_y_reverse() +  scale_y_continuous(lim=c(0,12))  #, labels = scales::scientific
+ 
+p
+

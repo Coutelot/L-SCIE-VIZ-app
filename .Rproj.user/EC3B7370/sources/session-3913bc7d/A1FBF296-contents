@@ -1,0 +1,735 @@
+rm(list = ls())
+mypath = "C:/Users/fanny/OneDrive - Clemson University/NEUP/Database"
+setwd(mypath)
+#install.packages("fuzzyjoin")
+#install.packages("sqldf")
+library("fuzzyjoin")
+library(plyr)
+library(dplyr)
+library(tidyverse)
+library(tidypaleo)
+library(gridExtra)
+library(grid)
+library(ggplot2)
+library(lattice)
+library(moonBook)
+require(ggiraph)
+require(ggiraphExtra)
+require(plyr)
+library(viridisLite)
+library(viridis)
+theme_set(theme_bw(8))
+
+
+#df <- read.csv("Clemson-database-compiled-dataset.csv")
+df <- read.csv("lscie-jaea-merge.csv")
+newdf<- read.csv("All-Dataset.csv")
+# Clean the dataset by removing rows with NA values in the 'Sorbate' column
+df_cleaned <- df %>% filter(!is.na(Sorbate))
+
+# Load necessary library for plotting
+library(ggplot2)
+
+# Define the elements to count
+elements_to_count <- c("Pu(+4)", "Am(+3)", "Cm(+3)", "Eu(+3)", "Pu(+5)", "Pu(+6)", "citric acid", "oxalic acid", "Np(+5)", "Ra(+2)")
+
+# Count occurrences of each element in the 'Sorbate' column
+sorbate_counts <- table(factor(df_cleaned$Sorbate, levels = elements_to_count))
+
+# Convert the counts to a data frame
+sorbate_counts_df <- as.data.frame(sorbate_counts)
+colnames(sorbate_counts_df) <- c('Element', 'Count')
+
+# Display the counts of the specified elements
+head(sorbate_counts_df)
+
+# Create a bar plot for the specified element occurrences
+png("elements-counts.png", width=9, height=6, units='in', res=200)
+elements<-bar_plot <- ggplot(sorbate_counts_df, aes(x = Element, y = Count)) + 
+  geom_bar(stat = 'identity', alpha = 0.7) + 
+  labs(title = 'Elements added in the database', x = 'Element', y = 'Number of datasets') + 
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  theme(plot.title = element_text(size = rel(1.5), face = 'bold',  vjust=1, hjust=.5)) +
+  scale_color_viridis(discrete=TRUE, option="viridis") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme(axis.title.x = element_text(size = 12, vjust =.3)) +
+  theme(strip.text = element_text(size=12))+
+  theme(axis.title.y = element_text(size = 12, vjust = 2)) +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(legend.position = "right") +
+  theme(legend.text = element_text(size=8))
+elements
+dev.off()
+# Display the bar plot
+
+
+
+
+############################################################################################
+
+
+# Count occurrences of each unique mineral in the 'Mineral' column
+mineral_counts <- table(df_cleaned$Mineral)
+
+# Convert the counts to a data frame
+mineral_counts_df <- as.data.frame(mineral_counts)
+colnames(mineral_counts_df) <- c('Mineral', 'Count')
+
+# Display the counts of minerals
+head(mineral_counts_df)
+
+# Load necessary library for plotting
+library(ggplot2)
+
+# Create a bar plot for the mineral occurrences
+png("mineral-counts.png", width=9, height=6, units='in', res=200)
+bar_plot_minerals1 <- ggplot(mineral_counts_df, aes(x = Mineral, y = Count)) + 
+  geom_bar(stat = 'identity', alpha = 0.7) + 
+  labs(title = 'Minerals added in the database', x = 'Mineral', y = 'Number of datasets') + 
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_color_viridis(discrete=TRUE, option="viridis") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme(axis.title.x = element_text(size = 12, vjust =.3)) +
+  theme(strip.text = element_text(size=10))+
+  theme(axis.title.y = element_text(size = 12, vjust = 2)) +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(legend.position = "right") +
+  theme(legend.text = element_text(size=8))
+bar_plot_minerals1
+dev.off()
+
+
+#########################################################################################################################
+############################################################################################
+
+# Load the new dataset
+new_df <- read.csv('ALL-Dataset.csv')
+
+# Display the first few rows to understand its structure
+head(new_df)
+
+# Get unique values in the Sorbate column
+unique_sorbates <- unique(new_df$Sorbate)
+
+# Create a data frame with counts
+sorbate_counts <- data.frame(
+  Sorbate = unique_sorbates,
+  Count = sapply(unique_sorbates, function(x) sum(new_df$Sorbate == x, na.rm = TRUE))
+)
+
+# Sort by count in descending order
+sorbate_counts <- sorbate_counts[order(-sorbate_counts$Count), ]
+
+# Display the sorted list
+print(sorbate_counts)
+library(gridExtra)
+pdf("sorbate_counts.pdf", height=11, width=8.5)
+grid.table(sorbate_counts)
+dev.off()
+# Display all rows of the sorted sorbate counts
+print(sorbate_counts, n = nrow(sorbate_counts))
+
+
+# Convert the counts to a data frame
+sorbate_counts <- as.data.frame(sorbate_counts)
+colnames(sorbate_counts) <- c('Element', 'Count')
+
+# Display the counts of the specified elements in the sorbate column
+head(sorbate_counts)
+
+# Display the counts of the specified elements
+head(sorbate_counts)
+
+# Create a bar plot for the specified element occurrences
+#png("elements-counts.png", width=9, height=6, units='in', res=200)
+ALLelements<-bar_plot <- ggplot(sorbate_counts, aes(x = Element, y = Count)) + 
+  geom_bar(stat = 'identity', alpha = 0.7) + 
+  labs(title = 'Elements added in the database', x = 'Element', y = 'Number of datasets') + 
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  theme(plot.title = element_text(size = rel(1.5), face = 'bold',  vjust=1, hjust=.5)) +
+  scale_color_viridis(discrete=TRUE, option="viridis") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme(axis.title.x = element_text(size = 12, vjust =.3)) +
+  theme(strip.text = element_text(size=12))+
+  theme(axis.title.y = element_text(size = 12, vjust = 2)) +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(legend.position = "right") +
+  theme(legend.text = element_text(size=8))
+ALLelements
+#dev.off()
+####################################################################################################
+# Count occurrences of each unique mineral in the 'Mineral' column
+mineral_counts_new <- table(new_df$Mineral)
+
+# Convert the counts to a data frame
+mineral_counts_df_new <- as.data.frame(mineral_counts_new)
+colnames(mineral_counts_df_new) <- c('Mineral', 'Count')
+
+# Create a bar plot for the mineral occurrences
+
+bar_plot_minerals_new <- ggplot(mineral_counts_df_new, aes(x = Mineral, y = Count)) + 
+  geom_bar(stat = 'identity', alpha = 0.7) + 
+  labs(title = 'Minerals added in the database', x = 'Mineral', y = 'Number of datasets') + 
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  scale_color_viridis(discrete=TRUE, option="viridis") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme(axis.title.x = element_text(size = 12, vjust =.3)) +
+  theme(strip.text = element_text(size=10))+
+  theme(axis.title.y = element_text(size = 12, vjust = 2)) +
+  theme(axis.text.x = element_text(size=12)) +
+  theme(axis.text.y = element_text(size=12)) +
+  theme(legend.position = "right") +
+  theme(legend.text = element_text(size=8))
+
+# Display the bar plot
+print(bar_plot_minerals_new)
+
+
+
+###############################################################################
+# Heat plot
+
+# Create a contingency table of Sorbate vs Minerals
+sorbate_mineral_table <- table(new_df$Sorbate, new_df$Mineral)
+
+# Load necessary library for plotting
+library(ggplot2)
+
+# Convert the table to a data frame for plotting
+sorbate_mineral_df <- as.data.frame(as.table(sorbate_mineral_table))
+
+# Create a heat map
+heat_map <- ggplot(sorbate_mineral_df, aes(Var1, Var2, fill = Freq)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "blue") +
+  labs(title = "Heat Map of Sorbate vs Minerals", x = "Sorbate", y = "Mineral") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Display the heat map
+print(heat_map)
+######################################################################################
+#################################################################################
+##################################################################################
+################################################################################
+# data treatment
+#################################################################################
+# Load the dataset
+sc_dataset <- read.csv("lscie-jaea-merge.csv")
+
+# Add a new column 'Kd' which is Sorbate_val divided by Aq_val
+sc_dataset$Kd <- (sc_dataset$Sorbate_val / (sc_dataset$Aq_val * sc_dataset$Mineral_val))*1000
+
+# Save the updated dataset to a new file
+write.csv(sc_dataset, "sc.dataset_with_kd.csv", row.names = FALSE)
+
+# Display the head of the updated dataset
+print(head(sc_dataset))
+
+
+###################################################################
+#Create mineral class column
+# First, create the mapping vector
+mineral_class_mapping <- c(
+  "Al(OH)3" = "AlO", 
+  "albite" = "Feldspar", 
+  "alumina" = "AlO", 
+  "amorphous silica" = "Silicates",
+  "anatase" = "TiO", 
+  "anatase/rutile" = "TiO",
+  "aragonite" = "CaC", 
+  "bentonite" = "Clays", 
+  "biotite" = "Silicates",
+  "birnessite" = "MnO", 
+  "boehmite" = "AlO", 
+  "calcite" = "CaC", 
+  "chlorite" = "Chlorites",
+  "clinoptilolite" = "Zeolites", 
+  "corundum" = "AlO", 
+  "ferrihydrite" = "FeO", 
+  "ferrous oxide" = "FeO",
+  "fluoroapatite" = "Phosphates", 
+  "gama-MnO2" = "MnO", 
+  "gibbsite" = "AlO", 
+  "goethite" = "FeO",
+  "hematite" = "FeO", 
+  "heulandite" = "Zeolites", 
+  "hydrous aluminum oxide" = "AlO",
+  "hydrous manganese oxide" = "MnO", 
+  "hydroxyapatite" = "Phosphates", 
+  "illite" = "Clays",
+  "kaolinite" = "Clays", 
+  "lepidocrosite" = "FeO", 
+  "maghemite" = "FeO", 
+  "magnetite" = "FeO",
+  "montmorillonite" = "Clays", 
+  "muscovite" = "Phyllosilicates/Mica", 
+  "Na-bentonite" = "Clays",
+  "quartz" = "Silicates", 
+  "rutile" = "TiO", 
+  "shale" = "Clays", 
+  "smectite(kaolinite)" = "Clays",
+  "vernadite" = "Oxides", 
+  "zirconia" = "ZrO"
+)
+
+# Add the Mineral_Class column using the vector
+sc_dataset$Mineral_Class <- mineral_class_mapping[sc_dataset$Mineral]
+
+# Save the updated dataset
+write.csv(sc_dataset, "sc.dataset_with_mineral_class.csv", row.names = FALSE)
+
+
+################################################################################
+##################################################################################
+#add column radius
+
+# Create a mapping of elements to their atomic radii (in picometers)
+atomic_radius <- c(
+  "H" = 53,    # H(+1)
+  "Li" = 167,  # Li(+1)
+  "Na" = 190,  # Na(+1)
+  "K" = 243,   # K(+1)
+  "Rb" = 265,  # Rb(+)
+  "Cs" = 298,  # Cs(+1)
+  "Be" = 112,  # Be(+2)
+  "Mg" = 145,  # Mg(+2)
+  "Ca" = 194,  # Ca(+2)
+  "Sr" = 219,  # Sr(+2)
+  "Ba" = 253,  # Ba(+2)
+  "Ra" = 283,  # Ra(+2)
+  "Sc" = 184,  # Sc(+3)
+  "Y" = 212,   # Y(+3)
+  "La" = 187,  # La(+3)
+  "Ti" = 176,  # Ti(+4)
+  "Zr" = 206,  # Zr(+4)
+  "Hf" = 208,  # Hf(+4)
+  "V" = 171,   # V(+5)
+  "Nb" = 198,  # Nb(+5)
+  "Ta" = 200,  # Ta(+5)
+  "Cr" = 166,  # Cr(+3,+6)
+  "Mo" = 190,  # Mo(+6)
+  "W" = 193,   # W(+6)
+  "Mn" = 161,  # Mn(+2)
+  "Tc" = 183,  # Tc(+7)
+  "Re" = 188,  # Re(+7)
+  "Fe" = 156,  # Fe(+2)
+  "Ru" = 178,  # Ru(+3)
+  "Os" = 185,  # Os(+4)
+  "Co" = 152,  # Co(+2)
+  "Rh" = 173,  # Rh(+3)
+  "Ir" = 180,  # Ir(+3)
+  "Ni" = 149,  # Ni(+2)
+  "Pd" = 169,  # Pd(+2)
+  "Pt" = 177,  # Pt(+2)
+  "Cu" = 145,  # Cu(+2)
+  "Ag" = 165,  # Ag(+1)
+  "Au" = 174,  # Au(+1)
+  "Zn" = 142,  # Zn(+2)
+  "Cd" = 161,  # Cd(+2)
+  "Hg" = 171,  # Hg(+2)
+  "B" = 87,    # B(+3)
+  "Al" = 118,  # Al(+3)
+  "Ga" = 136,  # Ga(+3)
+  "In" = 156,  # In(+3)
+  "Tl" = 156,  # Tl(+1)
+  "C" = 67,    # C(+4)
+  "Si" = 111,  # Si(+4)
+  "Ge" = 125,  # Ge(+4)
+  "Sn" = 145,  # Sn(+4)
+  "Pb" = 154,  # Pb(+2)
+  "N" = 56,    # N(+5)
+  "P" = 98,    # P(+5)
+  "As" = 114,  # As(+5)
+  "Sb" = 133,  # Sb(+5)
+  "Bi" = 143,  # Bi(+3)
+  "O" = 48,    # O(-2)
+  "S" = 88,    # S(+6)
+  "Se" = 103,  # Se(+4,+6)
+  "Te" = 123,  # Te(+4)
+  "Po" = 135,  # Po(+4)
+  "F" = 42,    # F(-1)
+  "Cl" = 79,   # Cl(-1)
+  "Br" = 94,   # Br(-1)
+  "I" = 115,   # I(-1)
+  "At" = 127,  # At(-1)
+  "He" = 31,   # He
+  "Ne" = 38,   # Ne
+  "Ar" = 71,   # Ar
+  "Kr" = 88,   # Kr
+  "Xe" = 108,  # Xe
+  "Rn" = 120,  # Rn
+  "Th" = 179,  # Th(+4)
+  "Pa" = 163,  # Pa(+5)
+  "U" = 156,   # U(+6)
+  "Np" = 155,  # Np(+4,+5)
+  "Pu" = 159,  # Pu(+4,+5)
+  "Am" = 173,  # Am(+3)
+  "Cm" = 174,  # Cm(+3)
+  "Eu" = 185,  # Eu(+3)
+  "Sm" = 185,  # Sm(+3)
+  "Yb" = 174   # Yb(+3)
+)
+
+# Function to extract element from sorbate notation
+extract_element <- function(sorbate) {
+  if (is.na(sorbate) || sorbate == "") return(NA)
+  
+  # Handle special cases first
+  if (sorbate %in% c("Aminotriazole", "Anthracene", "COM", "Fulvic_acid", 
+                     "Humic_acid", "Ketogluconate", "Mellitic_acid", 
+                     "Oxalate", "Phthalic_acid", "Trimesic_acid", "Dodecylamine")) {
+    return(NA)
+  }
+  
+  # Extract element symbol from the sorbate string
+  element <- gsub("\\(.*\\)", "", sorbate)  # Remove everything in parentheses
+  return(element)
+}
+
+# Add Radius column
+sc_dataset$Element <- sapply(sc_dataset$Sorbate, extract_element)
+sc_dataset$Radius <- sapply(sc_dataset$Element, function(x) atomic_radius[x])
+
+# Display summary of the new columns
+print("Sample of the dataset with new columns:")
+print(head(sc_dataset[, c("Sorbate", "Element", "Radius")]))
+
+print("\
+Summary of Radius values:")
+print(summary(sc_dataset$Radius))
+
+# Save the updated dataset
+write.csv(sc_dataset, "sc.dataset_with_radius.csv", row.names = FALSE)
+
+###########################################################################
+##########################################################################
+# create ionic potential column
+
+# Function to extract charge from sorbate notation
+extract_charge <- function(sorbate) {
+  if (is.na(sorbate) || sorbate == "") return(NA)
+  
+  # Handle special cases (organic compounds) that don't have charges
+  if (sorbate %in% c("Aminotriazole", "Anthracene", "COM", "Fulvic_acid", 
+                     "Humic_acid", "Ketogluconate", "Mellitic_acid", 
+                     "Oxalate", "Phthalic_acid", "Trimesic_acid", "Dodecylamine")) {
+    return(NA)
+  }
+  
+  # Extract charge from parentheses
+  charge_match <- regexpr("\\((\\+|\\-)?\\d+\\)", sorbate)
+  if (charge_match != -1) {
+    charge_str <- substr(sorbate, charge_match + 1, 
+                         charge_match + attr(charge_match, "match.length") - 2)
+    # Convert the string to numeric, handling the plus sign
+    charge <- as.numeric(gsub("\\+", "", charge_str))
+    return(charge)
+  }
+  return(NA)
+}
+
+# Add Charge column and calculate Ionic Potential
+sc_dataset$Charge <- sapply(sc_dataset$Sorbate, extract_charge)
+
+# Calculate Ionic Potential (converting radius from pm to Angstroms for conventional units)
+sc_dataset$Ionic_Potential <- sc_dataset$Charge / (sc_dataset$Radius / 100)
+
+# Display sample of the dataset with new columns
+print("Sample of the dataset with new columns:")
+print(head(sc_dataset[, c("Sorbate", "Element", "Radius", "Charge", "Ionic_Potential")]))
+
+print("\
+Summary of Charge values:")
+print(summary(sc_dataset$Charge))
+
+print("\
+Summary of Ionic Potential values:")
+print(summary(sc_dataset$Ionic_Potential))
+
+# Save the updated dataset
+write.csv(sc_dataset, "sc.dataset_with_ionic_potential.csv", row.names = FALSE)
+
+
+
+###################################
+
+# Add a new column 'percent_sorbed' to the dataset
+sc_dataset <- sc_dataset %>%
+  mutate(percent_sorbed = ifelse(!is.na(Sorbate_val) & Sorbate_val != 0,
+                                 ((Sorbate_val - Aq_val) / Sorbate_val) * 100,
+                                 NA))
+
+# Display the first few rows to confirm the addition
+print("First few rows of the dataset with the new column 'percent_sorbed':")
+print(head(sc_dataset))
+
+write.csv(sc_dataset, "sc.dataset_added-column.csv", row.names = FALSE)
+#############################################################################################
+#########################################################################################
+#########################################################################################
+############################### PLOTTING ##################################################
+#########################################################################################
+#########################################################################################
+
+# Calculate Kd (distribution coefficient) as Sorbed/Aqueous
+sc_dataset$Kd.L.g <- (sc_dataset$Sorbed_val / sc_dataset$Aq_val * "Mineral_val")
+sc_dataset$Kd.L.kg <- (sc_dataset$Sorbed_val / sc_dataset$Aq_val * "Mineral_val")*1000
+# Load required libraries
+library(ggplot2)
+library(gridExtra)
+
+# Create the boxplot with facets by Mineral_Class
+# Transform Kd to log scale for better visualization
+# Create the boxplot with switched axes
+library(viridis)  # For a better color palette
+################################ BOXPLOT  Kd Values ###############################################
+# Create the boxplot with switched axes and improved colors
+p_colored_improved <- ggplot(sc_dataset, aes(x = log10(Kd), y = Mineral, fill = Mineral)) +
+  geom_boxplot() +
+  facet_wrap(~Mineral_Class, scales = "free_y") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme_bw() +
+  theme(
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 8),
+    legend.position = "none",  # Remove legend as it's redundant with y-axis
+    strip.text = element_text(size = 10, face = "bold"),  # Facet labels
+    panel.spacing = unit(0.5, "lines")  # Add more space between facets
+  ) +
+  labs(x = "log10(Kd)", y = "Mineral", 
+       title = "Distribution of Kd Values by Mineral Class")
+
+# Save the improved plot
+ggsave("kd_boxplot_colored_improved.png", p_colored_improved, width = 15, height = 12)
+
+# Display the improved plot
+print(p_colored_improved)
+
+# Display summary statistics
+print("Summary of Kd values:")
+print(summary(sc_dataset$Kd))
+
+######################### Scaterred plot Kd values #######################################
+
+# Create a scatter plot with switched axes and color by Mineral
+p_scatter <- ggplot(sc_dataset, aes(x = log10(Kd), y = Mineral, color = Mineral)) +
+  geom_point(alpha = 0.6, size = 2) +  # Add scatter points with transparency
+  facet_wrap(~Mineral_Class, scales = "free_y") +
+  theme_bw() +
+  theme(
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 8),
+    legend.position = "none",  # Remove legend as it's redundant with y-axis
+    strip.text = element_text(size = 10, face = "bold"),  # Facet labels
+    panel.spacing = unit(0.5, "lines")  # Add more space between facets
+  ) +
+  labs(x = "log10(Kd)", y = "Mineral", 
+       title = "Scatter Plot of Kd Values by Mineral Class")
+
+# Save the scatter plot
+ggsave("kd_scatter_plot.png", p_scatter, width = 15, height = 12)
+
+# Display the scatter plot
+print(p_scatter)
+
+
+
+##################################################################################################
+############################# combining Kd boxplot and bar plot with stats
+library(ggplot2)
+library(dplyr)
+# First, clean the dataset
+sc_dataset_clean <- sc_dataset %>%
+  filter(!is.na(Kd) & is.finite(log10(Kd)))
+
+# Create count data
+count_data_fixed <- data.frame(
+  Mineral_Class = unique(sc_dataset_clean$Mineral_Class),
+  total_sorbates = sapply(unique(sc_dataset_clean$Mineral_Class), function(x) {
+    n_distinct(sc_dataset_clean$Sorbate[sc_dataset_clean$Mineral_Class == x])
+  })
+)
+
+# Print the count data to verify
+print("Count data:")
+print(count_data_fixed)
+
+# Create the plot
+BOX_bar <- ggplot() +
+  # Bar plot for Sorbate counts
+  geom_bar(data = count_data_fixed, 
+           aes(x = Mineral_Class, y = total_sorbates, fill = Mineral_Class),
+           stat = "identity", alpha = 0.6) +
+  # Box plot for Kd values
+  geom_boxplot(data = sc_dataset_clean, 
+               aes(x = Mineral_Class, y = log10(Kd) * max(count_data_fixed$total_sorbates)/10,
+                   group = Mineral_Class),
+               color = "red", alpha = 0.5) +
+  # Primary y-axis (Sorbate counts)
+  scale_y_continuous(
+    name = "Number of Unique Sorbates",
+    # Secondary y-axis (Kd values)
+    sec.axis = sec_axis(~. * 10/max(count_data_fixed$total_sorbates),
+                        name = "log10(Kd)")
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.title.y.left = element_text(color = "black"),
+    axis.title.y.right = element_text(color = "red"),
+    legend.position = "none"
+  ) +
+  labs(x = "Mineral Class",
+       title = "Distribution of Unique Sorbates and Kd Values by Mineral Class")
+
+# Save and display the plot
+ggsave("mineral_class_sorbate_kd_fixed.png", BOX_bar, width = 15, height = 8)
+print(BOX_bar)
+
+
+######################################################################################
+####################################################################################
+### ionic potential plot
+#######################################################################################
+#######################################################################################
+
+# Filter dataset for Mineral_Class = 'FeO' and non-missing values
+sc_dataset_ionic_FeO <- sc_dataset %>%
+  filter(Mineral_Class == "FeO" & !is.na(percent_sorbed) & !is.na(Ionic_Potential))
+
+# Create the plot
+percent_sorbed_plot <- ggplot(sc_dataset_ionic, 
+                              aes(x = percent_sorbed, 
+                                  y = Ionic_Potential,
+                                  color = Sorbate,
+                                  shape = Mineral)) +
+  geom_point(alpha = 0.6) +
+  scale_fill_viridis(discrete = TRUE) +
+  theme_bw() +
+  theme(
+    legend.position = "right",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 10),
+    strip.text = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  labs(
+    x = "Percent Sorbed",
+    y = "Ionic Potential",
+    title = "Percent Sorbed vs Ionic Potential for FeO",
+    shape = "Mineral",
+    color = "Sorbate"
+  )
+
+# Save and display the plot
+ggsave("percent_sorbed_vs_ionic_potential_FeO.png", percent_sorbed_plot, width = 15, height = 10)
+print(percent_sorbed_plot)
+
+
+################################################################################################
+
+# Filter dataset for Mineral_Class = 'FeO' and non-missing values
+sc_dataset_ionic_Clays <- sc_dataset %>%
+  filter(Mineral_Class == "Clays" & !is.na(percent_sorbed) & !is.na(Ionic_Potential))
+
+# Create the plot
+percent_sorbed_plot_Clays <- ggplot(sc_dataset_ionic_Clays, 
+                                    aes(x = percent_sorbed, 
+                                        y = Ionic_Potential,
+                                        color = Sorbate,
+                                        shape = Mineral)) +
+  geom_point(alpha = 0.6) +
+  scale_fill_viridis(discrete = TRUE) +
+  theme_bw() +
+  theme(
+    legend.position = "right",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 10),
+    strip.text = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  labs(
+    x = "Percent Sorbed",
+    y = "Ionic Potential",
+    title = "Percent Sorbed vs Ionic Potential for Clays",
+    shape = "Mineral",
+    color = "Sorbate"
+  )
+
+# Save and display the plot
+ggsave("percent_sorbed_vs_ionic_potential_Clays.png", percent_sorbed_plot_Clays, width = 15, height = 10)
+print(percent_sorbed_plot_Clays)
+
+
+######################################################################################################################
+###########################################################################################################
+# testin ratio ionic potential/Mineral amount
+#Add a new column 'ratio_IP/M' to the dataset
+sc_dataset <- sc_dataset %>%
+  mutate(ratio_IP_M = ifelse(!is.na(Ionic_Potential) & !is.na(Mineral_val) & Mineral_val != 0,
+                             Ionic_Potential / Mineral_val,
+                             NA))
+
+# Display the first few rows to confirm the addition
+print("First few rows of the dataset with the new column 'ratio_IP/M':")
+print(head(sc_dataset))
+
+
+# Filter dataset for Mineral_Class = 'Oxides' and non-missing values
+sc_dataset_ratio_IP_M_FeO <- sc_dataset %>%
+  filter(Mineral_Class == "FeO" & !is.na(ratio_IP_M) & !is.na(Kd))
+
+# Create the scatter plot
+ratio_kd_plot_IP_M_FeO <- ggplot(sc_dataset_ratio_IP_M_FeO, 
+                                 aes(x = ratio_IP_M, 
+                                     y = log10(Kd))) +
+  geom_point(alpha = 0.6, color = "blue") +
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
+  labs(
+    x = "Ratio (Ionic Potential / Mineral Value)",
+    y = "log10(Kd)",
+    title = "Scatter Plot of Ratio_IP/M vs Kd for Iron Oxides"
+  )
+
+# Save and display the plot
+ggsave("ratio_IP_M_vs_Kd_Oxides.png", ratio_kd_plot_IP_M_FeO, width = 10, height = 6)
+print(ratio_kd_plot_IP_M_FeO)
+
+# Print summary of data points used
+print("\
+Summary of data points in the plot:")
+summary_stats <- sc_dataset_filtered %>%
+  summarise(
+    n_observations = n(),
+    min_ratio = min(ratio_IP_M, na.rm = TRUE),
+    max_ratio = max(ratio_IP_M, na.rm = TRUE),
+    min_Kd = min(Kd, na.rm = TRUE),
+    max_Kd = max(Kd, na.rm = TRUE)
+  )
+print(summary_stats)
+
+############################## Heat map ##############################
+
+# Create a heat map
+heat_map <- ggplot(sorbate_mineral_df, aes(Var1, Var2, fill = Freq)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "blue") +
+  labs(title = "Heat Map of Sorbate vs Minerals", x = "Sorbate", y = "Mineral") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Display the heat map
+print(heat_map)
+#####################
+
+
